@@ -1,0 +1,42 @@
+{
+   "cSpell.words": [
+      "eonix",
+      "vitejs",
+      "vuedx"
+   ],
+   "vetur.format.scriptInitialIndent": true,
+   "vetur.format.styleInitialIndent": true,
+   "vetur.format.options.tabSize": 3,
+   "vetur.format.defaultFormatter.ts": "vscode-typescript",
+   "editor.wordWrap": "on",
+   "typescript.preferences.quoteStyle": "single",
+   "javascript.preferences.quoteStyle": "single",
+   "html.format.wrapLineLength": 0,
+   "editor.wrappingIndent": "indent",
+   "azureFunctions.showExtensionsCsprojWarning": false,
+   "vetur.validation.templateProps": true,
+   "vetur.format.defaultFormatterOptions": {
+      "js-beautify-html": {
+         "wrap_attributes": "preserve-aligned",
+         "indent_handlebars": true,
+         "indent_inner_html": true,
+         "wrap_line_length": 0,
+         "wrap_attributes_indent_size": 3
+      }
+   },
+   "editor.tabSize": 3,
+   "vetur.format.defaultFormatter.html": "js-beautify-html",
+   "html.format.wrapAttributes": "aligned-multiple",
+   "typescript.tsdk": "node_modules\\typescript\\lib",
+   "html.format.indentInnerHtml": true,
+   "html.format.indentHandlebars": true,
+   "cSpell.allowCompoundWords": true,
+   "cSpell.ignorePaths": [
+      "**/package-lock.json",
+      "**/node_modules/**",
+      "**/vscode-extension/**",
+      "**/.git/objects/**",
+      ".vscode",
+      "**/*.code-workspace"
+   ]
+}
