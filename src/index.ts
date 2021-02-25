@@ -1,2 +1,9 @@
+import type { App } from 'vue';
 
-export { default as AdoConfig } from './components/AdoConfig.vue';
+import AdoConfig from './components/AdoConfig.vue';
+
+function install(Vue: App) {
+   Vue.component('ado-config', AdoConfig);
+}
+
+export default { install };

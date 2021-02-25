@@ -1,18 +1,20 @@
+
 <template>
-   This is the config component
+   <div>
+      Test snippet
+   </div>
 </template>
 
 <script lang="ts">
+
    import { defineComponent } from 'vue';
 
-
    export default defineComponent({
+      props: {
+      },
       setup() {
-         console.log('In setup');
+         return {};
       }
    });
 
 </script>
-
-<style>
-</style>
