@@ -19,6 +19,7 @@
   "private": false,
   "license": "MIT",
   "dependencies": {
+    "@eonix-io/client": "file:../eonix-client",
     "vue": "^3.0.5"
   },
   "devDependencies": {
