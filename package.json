@@ -1,6 +1,15 @@
 {
-  "name": "eonix-ado-plugin",
-  "version": "0.0.0",
+  "name": "@eonix-io/plugin-ado",
+  "description": "An Azure DevOps plugin for Eonix.Io",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eonix-io/plugin-ado"
+  },
+  "version": "0.0.1",
+  "author": {
+    "name": "Josh Kraker",
+    "email": "joshkrak@gmail.com"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -15,6 +24,9 @@
       "require": "./dist/eonix-ado-plugin.umd.js"
     }
   },
+  "files": [
+    "dist/"
+  ],
   "unpkg": "dist/eonix-ado-plugin.umd.js",
   "private": false,
   "license": "MIT",
