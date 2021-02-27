@@ -11,7 +11,7 @@
     "email": "joshkrak@gmail.com"
   },
   "scripts": {
-    "dev": "vite",
+    "start": "vite",
     "build": "vite build",
     "serve": "vite preview",
     "lint": "eslint src/**/*.{ts,vue}"
@@ -31,7 +31,8 @@
   "private": false,
   "license": "MIT",
   "dependencies": {
-    "@eonix-io/client": "file:../eonix-client",
+    "@eonix-io/client": "file:../client",
+    "azure-devops-extension-api": "^1.158.0",
     "vue": "^3.0.5"
   },
   "devDependencies": {
