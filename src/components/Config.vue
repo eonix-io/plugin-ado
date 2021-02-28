@@ -81,7 +81,10 @@
    import { computed, defineComponent, reactive, ref, watch } from 'vue';
    import { CoreRestClient, TeamProjectReference } from 'azure-devops-extension-api/Core';
    import type { IVssRestClientOptions } from 'azure-devops-extension-api/Common/Context';
-   import { ReportingWorkItemRevisionsFilter, WorkItem, WorkItemTrackingRestClient, WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
+   import { WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
+   import { useWorkItems } from './useWorkItems';
+   import { useWorkItemTypes } from './useWorkItemTypes';
+   import { useFieldMappings } from './useFieldMappings';
 
    const TASK_BATCH_LIMIT = 1;
 
@@ -135,79 +138,27 @@
             if (process.env?.VUE_APP_TEST_PROJECT) { project.value = projects.find(p => p.name === process.env?.VUE_APP_TEST_PROJECT) ?? null; }
          });
 
-         const workItemTypes = ref<WorkItemType[] | null>(null);
+         const workItemTypes = useWorkItemTypes(project, restOptions);
 
-         //When project changes, get list of workItemTypes
-         watch(project, async project => {
-            workItemTypes.value = null;
+         watch(workItemTypes, itemTypes => {
             selectedWorkItemTypes.value = [];
-            if (!project) { return; }
-            const workItemClient = new WorkItemTrackingRestClient(restOptions.value);
-            const itemTypes = await workItemClient.getWorkItemTypes(project.name);
-            itemTypes.sort((a, b) => a.name.localeCompare(b.name));
-            workItemTypes.value = itemTypes;
-            if (process.env?.VUE_APP_TEST_TYPES) {
-               const testTypes = itemTypes.filter(t => (process.env.VUE_APP_TEST_TYPES as string).includes(t.name));
-               testTypes.forEach(t => toggleWorkItemSelection(t));
-            }
+            if (!itemTypes) { return; }
+            if (!process.env?.VUE_APP_TEST_TYPES) { return; }
+            const testTypes = itemTypes.filter(t => (process.env.VUE_APP_TEST_TYPES as string).includes(t.name));
+            testTypes.forEach(t => toggleWorkItemSelection(t));
          });
 
+         /** Get a HTML friendly id for a WorkItemType to be used for checkbox id */
          const getWorkItemTypeId = (it: WorkItemType): string => {
             return it.name.toLowerCase().replaceAll(' ', '-');
          };
 
-         const loadingTasksMessage = ref<string | null>(null);
-         const workItemFields = ref<WorkItemFields | null>(null);
-         watch(project, async thisProject => {
+         const { workItems: workItemFields, status: loadingTasksMessage } = useWorkItems(project, restOptions, TASK_BATCH_LIMIT);
 
-            workItemFields.value = null;
-            if (!thisProject) {
-               return;
-            }
-
-            const filter: Partial<ReportingWorkItemRevisionsFilter> = {
-               includeDeleted: false,
-               includeLatestOnly: true
-            };
-
-            let batchNum = 1;
-            loadingTasksMessage.value = `Loading tasks batch ${batchNum}`;
-            const client = new WorkItemTrackingRestClient(restOptions.value);
-
-            let batchItems = await client.readReportingRevisionsPost(filter as ReportingWorkItemRevisionsFilter, thisProject.name);
-
-            const allItems: WorkItem[] = [];
-            while (!batchItems.isLastBatch && project.value === thisProject && batchNum < TASK_BATCH_LIMIT) {
-               allItems.push(...batchItems.values);
-               batchNum++;
-               loadingTasksMessage.value = `Loading tasks batch ${batchNum}`;
-               batchItems = await client.readReportingRevisionsPost(filter as ReportingWorkItemRevisionsFilter, thisProject.name, batchItems.continuationToken);
-
-            }
-
-            if (project.value !== thisProject) {
-               return;
-            }
-
-            workItemFields.value = {};
-            [...allItems, ...batchItems.values].forEach(t => {
-               const fields = Object.getOwnPropertyNames(t.fields);
-               for (const f of fields) {
-                  const value = t.fields[f];
-                  if (!value) { continue; }
-                  const fieldValues = workItemFields.value![f] ??= [];
-                  fieldValues.push({
-                     itemType: t.fields['System.WorkItemType'],
-                     value
-                  });
-               }
-            });
-
-            loadingTasksMessage.value = null;
-         });
 
          const selectedWorkItemTypes = ref<WorkItemType[]>([]);
 
+         /** Called when a WorkItemType checkbox is un/checked */
          const toggleWorkItemSelection = (it: WorkItemType): void => {
             const i = selectedWorkItemTypes.value.indexOf(it);
             if (i === -1) {
@@ -217,40 +168,7 @@
             }
          };
 
-         const mappings = computed<IFieldMapping[] | null>(() => {
-
-            if (!selectedWorkItemTypes.value.length) { return null; }
-
-            const dict: Record<string, IFieldMapping> = {};
-            const sortedTypes = [...selectedWorkItemTypes.value].sort((a, b) => a.name.localeCompare(b.name));
-            for (const type of sortedTypes) {
-               for (const field of type.fields) {
-                  let map = dict[field.referenceName];
-                  if (!map) {
-                     map = {
-                        hasValues: false,
-                        itemTypes: [],
-                        name: field.name,
-                        helpText: field.helpText,
-                        referenceName: field.referenceName
-                     };
-                     dict[field.referenceName] = map;
-                  }
-
-                  const fieldValues = (workItemFields.value ?? {})[field.referenceName] ?? [];
-
-                  map.itemTypes.push({
-                     iconUrl: type.icon.url,
-                     numTasksWithValue: fieldValues.filter(v => v.itemType === type.name).length
-                  });
-
-                  map.hasValues = map.itemTypes.some(t => t.numTasksWithValue);
-               }
-            }
-            const values = Object.values(dict);
-            values.sort((a, b) => a.name.localeCompare(b.name));
-            return values;
-         });
+         const mappings = useFieldMappings(selectedWorkItemTypes, workItemFields);
 
          const mappingFilters = reactive({
             hasValue: true
@@ -275,28 +193,6 @@
          // return { board };
       }
    });
-
-   interface IFieldMapping {
-      name: string;
-      referenceName: string;
-      helpText: string;
-      hasValues: boolean;
-      itemTypes: IFieldItemType[];
-   }
-
-   interface IFieldItemType {
-      iconUrl: string;
-      numTasksWithValue: number;
-   }
-
-   interface WorkItemFields {
-      [fieldName: string]: {
-         /** The work item type. Eg User Story */
-         itemType: string;
-         /** The given value for this field within the WorkItem */
-         value: string;
-      }[]
-   }
 
 </script>
 
