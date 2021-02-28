@@ -54,16 +54,11 @@
             {{loadingTasksMessage}}
          </div>
       </div>
-      <div class="row" v-if="workItems">
-         <div class="col">
-            Loaded {{workItems.length}} work items
-         </div>
-      </div>
-      <div class="row mappings" v-if="mappings && workItems && workItems.length">
+      <div class="row mappings" v-if="mappings && workItemFields">
          <div class="col">
             <div class="row">
                <div class="col">
-                  <input type="checkbox" v-model="mappingFilters.hideValueless" for="hideValuelessFilter">
+                  <input type="checkbox" v-model="mappingFilters.hasValue" for="hideValuelessFilter">
                   <label for="hideValuelessFilter">Hide fields with no values</label>
                </div>
             </div>
@@ -87,6 +82,8 @@
    import { CoreRestClient, TeamProjectReference } from 'azure-devops-extension-api/Core';
    import type { IVssRestClientOptions } from 'azure-devops-extension-api/Common/Context';
    import { ReportingWorkItemRevisionsFilter, WorkItem, WorkItemTrackingRestClient, WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
+
+   const TASK_BATCH_LIMIT = 1;
 
    export default defineComponent({
       props: {
@@ -160,11 +157,11 @@
          };
 
          const loadingTasksMessage = ref<string | null>(null);
-         const workItems = ref<WorkItem[] | null>(null);
+         const workItemFields = ref<WorkItemFields | null>(null);
          watch(project, async thisProject => {
 
+            workItemFields.value = null;
             if (!thisProject) {
-               workItems.value = null;
                return;
             }
 
@@ -180,18 +177,31 @@
             let batchItems = await client.readReportingRevisionsPost(filter as ReportingWorkItemRevisionsFilter, thisProject.name);
 
             const allItems: WorkItem[] = [];
-            while (!batchItems.isLastBatch && project.value === thisProject) {
+            while (!batchItems.isLastBatch && project.value === thisProject && batchNum < TASK_BATCH_LIMIT) {
                allItems.push(...batchItems.values);
                batchNum++;
                loadingTasksMessage.value = `Loading tasks batch ${batchNum}`;
                batchItems = await client.readReportingRevisionsPost(filter as ReportingWorkItemRevisionsFilter, thisProject.name, batchItems.continuationToken);
+
             }
 
             if (project.value !== thisProject) {
                return;
             }
 
-            workItems.value = [...allItems, ...batchItems.values];
+            workItemFields.value = {};
+            [...allItems, ...batchItems.values].forEach(t => {
+               const fields = Object.getOwnPropertyNames(t.fields);
+               for (const f of fields) {
+                  const value = t.fields[f];
+                  if (!value) { continue; }
+                  const fieldValues = workItemFields.value![f] ??= [];
+                  fieldValues.push({
+                     itemType: t.fields['System.WorkItemType'],
+                     value
+                  });
+               }
+            });
 
             loadingTasksMessage.value = null;
          });
@@ -227,9 +237,11 @@
                      dict[field.referenceName] = map;
                   }
 
+                  const fieldValues = (workItemFields.value ?? {})[field.referenceName] ?? [];
+
                   map.itemTypes.push({
                      iconUrl: type.icon.url,
-                     numTasksWithValue: workItems.value?.filter(w => w.fields[field.referenceName]).length ?? 0
+                     numTasksWithValue: fieldValues.filter(v => v.itemType === type.name).length
                   });
 
                   map.hasValues = map.itemTypes.some(t => t.numTasksWithValue);
@@ -241,16 +253,16 @@
          });
 
          const mappingFilters = reactive({
-            hideValueless: true
+            hasValue: true
          });
          const filteredMappings = computed(() => {
             return mappings.value?.filter(v => {
-               if (mappingFilters.hideValueless && !v.hasValues) { return false; }
+               if (mappingFilters.hasValue && !v.hasValues) { return false; }
                return true;
             });
          });
 
-         return { organizationUrl, token, connect, connectError, teamProjects, project, workItemTypes, isConnecting, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, loadingTasksMessage, workItems, filteredMappings, mappingFilters };
+         return { organizationUrl, token, connect, connectError, teamProjects, project, workItemTypes, isConnecting, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, loadingTasksMessage, workItemFields, filteredMappings, mappingFilters };
 
          // const client = inject<EonixClient>(EONIX_CLIENT_INJECTION_KEY)!;
          // const boardQ = boardQuery(props.boardId);
@@ -275,6 +287,15 @@
    interface IFieldItemType {
       iconUrl: string;
       numTasksWithValue: number;
+   }
+
+   interface WorkItemFields {
+      [fieldName: string]: {
+         /** The work item type. Eg User Story */
+         itemType: string;
+         /** The given value for this field within the WorkItem */
+         value: string;
+      }[]
    }
 
 </script>
