@@ -11,19 +11,11 @@
     "email": "joshkrak@gmail.com"
   },
   "scripts": {
-    "start": "vite",
-    "build": "vite build",
-    "serve": "vite preview",
+    "start": "vue-cli-service serve",
+    "build": "vue-cli-service build --target lib --name eonix-plugin-ado src/index.ts",
     "lint": "eslint src/**/*.{ts,vue}"
   },
-  "main": "./dist/eonix-ado-plugin.umd.js",
-  "module": "./dist/eonix-ado-plugin.es.js",
-  "exports": {
-    ".": {
-      "import": "./dist/eonix-ado-plugin.es.js",
-      "require": "./dist/eonix-ado-plugin.umd.js"
-    }
-  },
+  "main": "./dist/eonix-plugin-ado.umd.min.js",
   "files": [
     "dist/"
   ],
@@ -38,12 +30,13 @@
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.15.0",
     "@typescript-eslint/parser": "^4.15.0",
-    "@vitejs/plugin-vue": "^1.1.5",
+    "@vue/cli-plugin-eslint": "~4.5.0",
+    "@vue/cli-plugin-typescript": "~4.5.0",
+    "@vue/cli-service": "~4.5.0",
     "@vue/compiler-sfc": "^3.0.6",
     "@vuedx/typescript-plugin-vue": "^0.6.3",
     "eslint": "^7.21.0",
     "eslint-plugin-vue": "^7.5.0",
-    "typescript": "^4.1.3",
-    "vite": "^2.0.4"
+    "typescript": "^4.1.3"
   }
 }

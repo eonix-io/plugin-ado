@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "esnext",
+    "target": "es2019",
     "module": "esnext",
     "moduleResolution": "node",
     "strict": true,
@@ -10,12 +10,13 @@
     "noImplicitReturns": true,
     "noEmitOnError": true,
     "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
     "lib": [
       "esnext",
       "dom"
     ],
     "types": [
-      "vite/client"
+      "webpack-env"
     ],
     "baseUrl": ".",
     "paths": {

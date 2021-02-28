@@ -13,7 +13,8 @@ module.exports = {
       'Atomics': 'readonly',
       'SharedArrayBuffer': 'readonly',
       'module': 'readonly',
-      'require': 'readonly'
+      'require': 'readonly',
+      'process': 'readonly'
    },
    'parserOptions': {
       'ecmaVersion': 2021,
