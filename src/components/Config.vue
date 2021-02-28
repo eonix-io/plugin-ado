@@ -54,6 +54,11 @@
             {{loadingTasksMessage}}
          </div>
       </div>
+      <div class="row" v-if="workItems">
+         <div class="col">
+            Loaded {{workItems.length}} work items
+         </div>
+      </div>
       <div class="row mappings" v-if="mappings">
          <div class="col">
             <div class="row" v-for="m of mappings" :key="m.referenceName">
@@ -72,7 +77,7 @@
    import { computed, defineComponent, ref, watch } from 'vue';
    import { CoreRestClient, TeamProjectReference } from 'azure-devops-extension-api/Core';
    import { IVssRestClientOptions } from 'azure-devops-extension-api/Common/Context';
-   import { WorkItemTrackingRestClient, WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
+   import { ReportingWorkItemRevisionsFilter, WorkItem, WorkItemTrackingRestClient, WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
 
    export default defineComponent({
       props: {
@@ -146,8 +151,40 @@
          };
 
          const loadingTasksMessage = ref<string | null>(null);
-         watch(project, async project => {
-            loadingTasksMessage.value = 'Loading tasks';
+         const workItems = ref<WorkItem[] | null>(null);
+         watch(project, async thisProject => {
+
+            if (!thisProject) {
+               workItems.value = null;
+               return;
+            }
+
+            const filter: Partial<ReportingWorkItemRevisionsFilter> = {
+               includeDeleted: false,
+               includeLatestOnly: true
+            };
+
+            let batchNum = 1;
+            loadingTasksMessage.value = `Loading tasks batch ${batchNum}`;
+            const client = new WorkItemTrackingRestClient(restOptions.value);
+
+            let batchItems = await client.readReportingRevisionsPost(filter as ReportingWorkItemRevisionsFilter, thisProject.name);
+
+            const allItems: WorkItem[] = [];
+            while (!batchItems.isLastBatch && project.value === thisProject) {
+               allItems.push(...batchItems.values);
+               batchNum++;
+               loadingTasksMessage.value = `Loading tasks batch ${batchNum}`;
+               batchItems = await client.readReportingRevisionsPost(filter as ReportingWorkItemRevisionsFilter, thisProject.name, batchItems.continuationToken);
+            }
+
+            if (project.value !== thisProject) {
+               return;
+            }
+
+            workItems.value = [...allItems, ...batchItems.values];
+
+            loadingTasksMessage.value = null;
          });
 
          const selectedWorkItemTypes = ref<WorkItemType[]>([]);
@@ -187,7 +224,7 @@
             return values;
          });
 
-         return { organizationUrl, token, connect, connectError, teamProjects, project, workItemTypes, isConnecting, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, loadingTasksMessage };
+         return { organizationUrl, token, connect, connectError, teamProjects, project, workItemTypes, isConnecting, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, loadingTasksMessage, workItems };
 
          // const client = inject<EonixClient>(EONIX_CLIENT_INJECTION_KEY)!;
          // const boardQ = boardQuery(props.boardId);
