@@ -28,9 +28,9 @@ export function useWorkItems(project: Ref<TeamProjectReference | null>, restOpti
 
       let batchItems = await client.readReportingRevisionsPost(filter as ReportingWorkItemRevisionsFilter, thisProject.name);
 
-      const allItems: WorkItem[] = [];
+      workItems.value = {};
       while (!batchItems.isLastBatch && project.value === thisProject && batchNum < batchLimit) {
-         allItems.push(...batchItems.values);
+         workItems.value = aggregate(workItems.value, batchItems.values);
          batchNum++;
          status.value = `Loading tasks batch ${batchNum}`;
          batchItems = await client.readReportingRevisionsPost(filter as ReportingWorkItemRevisionsFilter, thisProject.name, batchItems.continuationToken);
@@ -41,19 +41,7 @@ export function useWorkItems(project: Ref<TeamProjectReference | null>, restOpti
          return;
       }
 
-      workItems.value = {};
-      [...allItems, ...batchItems.values].forEach(t => {
-         const fields = Object.getOwnPropertyNames(t.fields);
-         for (const f of fields) {
-            const value = t.fields[f];
-            if (!value) { continue; }
-            const fieldValues = workItems.value![f] ??= [];
-            fieldValues.push({
-               itemType: t.fields['System.WorkItemType'],
-               value
-            });
-         }
-      });
+      workItems.value = aggregate(workItems.value, batchItems.values);
 
       status.value = null;
    });
@@ -61,7 +49,22 @@ export function useWorkItems(project: Ref<TeamProjectReference | null>, restOpti
    return { status, workItems };
 }
 
-
+function aggregate(wif: WorkItemFields, workItems: WorkItem[]): WorkItemFields {
+   for (const t of workItems) {
+      const fields = Object.getOwnPropertyNames(t.fields);
+      for (const f of fields) {
+         const value = t.fields[f];
+         if (!value) { continue; }
+         const fieldValues = wif[f] ??= [];
+         fieldValues.push({
+            itemType: t.fields['System.WorkItemType'],
+            value,
+            itemId: t.id
+         });
+      }
+   }
+   return wif;
+}
 
 export interface WorkItemFields {
    [fieldName: string]: {
@@ -69,5 +72,7 @@ export interface WorkItemFields {
       itemType: string;
       /** The given value for this field within the WorkItem */
       value: string;
+      /** The id of the work item the value belongs to */
+      itemId: number;
    }[]
 }

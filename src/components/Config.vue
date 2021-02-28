@@ -56,21 +56,37 @@
       </div>
       <div class="row mappings" v-if="mappings && workItemFields">
          <div class="col">
-            <div class="row">
-               <div class="col">
-                  <input type="checkbox" v-model="mappingFilters.hasValue" for="hideValuelessFilter">
-                  <label for="hideValuelessFilter">Hide fields with no values</label>
-               </div>
+
+            <div>
+               <input type="checkbox" v-model="mappingFilters.hasValue" for="hideValuelessFilter">
+               <label for="hideValuelessFilter">Hide fields with no values</label>
             </div>
-            <div class="row" v-for="m of filteredMappings" :key="m.referenceName">
-               <div class="col">
-                  <div>
-                     <span :class="{'fw-bold': m.hasValues}">{{m.name}}</span>
-                     <img v-for="i of m.itemTypes" :key="i" :src="i.iconUrl">
-                  </div>
-                  <div>{{m.helpText}}</div>
-               </div>
-            </div>
+
+            <table class="table table-hover">
+               <thead>
+                  <tr>
+                     <td>Field</td>
+                     <td>
+                        <input class="form-control" placeholder="Task Id" v-model.number.lazy="taskId">
+                     </td>
+                  </tr>
+               </thead>
+               <tbody>
+                  <tr v-for="m of filteredMappings" :key="m.referenceName">
+                     <td>
+                        <div>
+                           <span :class="{'fw-bold': m.hasValues}">{{m.name}}</span>
+                           <img v-for="i of m.itemTypes" :key="i.iconUrl" :src="i.iconUrl">
+                        </div>
+                        <div>{{m.helpText}}</div>
+                     </td>
+                     <td>
+                        {{taskValues[m.referenceName]}}
+                     </td>
+                  </tr>
+               </tbody>
+            </table>
+
          </div>
       </div>
    </div>
@@ -85,8 +101,6 @@
    import { useWorkItems } from './useWorkItems';
    import { useWorkItemTypes } from './useWorkItemTypes';
    import { useFieldMappings } from './useFieldMappings';
-
-   const TASK_BATCH_LIMIT = 1;
 
    export default defineComponent({
       props: {
@@ -153,8 +167,7 @@
             return it.name.toLowerCase().replaceAll(' ', '-');
          };
 
-         const { workItems: workItemFields, status: loadingTasksMessage } = useWorkItems(project, restOptions, TASK_BATCH_LIMIT);
-
+         const { workItems: workItemFields, status: loadingTasksMessage } = useWorkItems(project, restOptions, Infinity);
 
          const selectedWorkItemTypes = ref<WorkItemType[]>([]);
 
@@ -180,7 +193,18 @@
             });
          });
 
-         return { organizationUrl, token, connect, connectError, teamProjects, project, workItemTypes, isConnecting, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, loadingTasksMessage, workItemFields, filteredMappings, mappingFilters };
+         const taskId = ref<number | null>(null);
+         const taskValues = computed(() => {
+            const ret: Record<string, string | null | undefined> = {};
+            if (!filteredMappings.value || !workItemFields.value || !taskId.value) { return ret; }
+            for (const field of filteredMappings.value) {
+               const value = workItemFields.value[field.referenceName].find(v => v.itemId == taskId.value);
+               ret[field.referenceName] = value?.value;
+            }
+            return ret;
+         });
+
+         return { organizationUrl, token, connect, connectError, teamProjects, project, workItemTypes, isConnecting, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, loadingTasksMessage, workItemFields, filteredMappings, mappingFilters, taskId, taskValues };
 
          // const client = inject<EonixClient>(EONIX_CLIENT_INJECTION_KEY)!;
          // const boardQ = boardQuery(props.boardId);
