@@ -19,7 +19,7 @@
       </div>
       <div class="row" v-if="token && organizationUrl">
          <div class="col">
-            <button class="btn btn-primary" @click="connect">Connect</button>
+            <button class="btn btn-primary" :disabled="isConnecting" @click="connect">Connect</button>
          </div>
       </div>
       <div class="row" v-if="teamProjects">
@@ -27,15 +27,22 @@
             <div class="form-floating">
                <select class="form-select" id="projectSelect" v-model="project">
                   <option :value="null">Select project</option>
-                  <option v-for="p of teamProjects" :key="p.id" :value="p.id">{{p.name}}</option>
+                  <option v-for="p of teamProjects" :key="p.id" :value="p">{{p.name}}</option>
                </select>
                <label for="projectSelect">Project</label>
             </div>
          </div>
       </div>
-      <div class="row" v-if="project">
-         <div class="com">
-            Test
+      <div class="row" v-if="project && !workItemTypes">
+         <div class="col">
+            Loading work item types for {{project.name}}
+         </div>
+      </div>
+      <div class="row" v-if="workItemTypes">
+         <div class="col">
+            <ul>
+               <li v-for="itemType of workItemTypes" :key="itemType">{{itemType.name}}</li>
+            </ul>
          </div>
       </div>
    </div>
@@ -43,9 +50,10 @@
 
 <script lang="ts">
 
-   import { computed, defineComponent, ref } from 'vue';
+   import { computed, defineComponent, ref, watch } from 'vue';
    import { CoreRestClient, TeamProjectReference } from 'azure-devops-extension-api/Core';
    import { IVssRestClientOptions } from 'azure-devops-extension-api/Common/Context';
+   import { WorkItemTrackingRestClient, WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
 
    export default defineComponent({
       props: {
@@ -67,9 +75,14 @@
             };
          });
 
+         watch(token, () => teamProjects.value = null);
+         watch(organizationUrl, () => teamProjects.value = null);
+
          const connectError = ref<string | null>(null);
          const teamProjects = ref<TeamProjectReference[] | null>(null);
+         const isConnecting = ref(false);
          const connect = async () => {
+            isConnecting.value = true;
             connectError.value = null;
             teamProjects.value = null;
             const coreClient = new CoreRestClient(restOptions.value);
@@ -79,12 +92,31 @@
             } catch (e) {
                console.error('Error getting projects', e);
                connectError.value = 'Error getting project listing. This usually means that your project url or token is incorrect';
+            } finally {
+               isConnecting.value = false;
             }
          };
 
-         const project = ref<string | null>(null);
+         watch(teamProjects, projects => {
+            if (!projects) { project.value = null; }
+         });
 
-         return { organizationUrl, token, connect, connectError, teamProjects, project };
+         const project = ref<TeamProjectReference | null>(null);
+
+         const workItemTypes = ref<WorkItemType[] | null>(null);
+
+         watch(project, async project => {
+            workItemTypes.value = null;
+            if (!project) { return; }
+            const workItemClient = new WorkItemTrackingRestClient(restOptions.value);
+            const itemTypes = await workItemClient.getWorkItemTypes(project.name);
+            itemTypes.sort((a, b) => a.name.localeCompare(b.name));
+            workItemTypes.value = itemTypes;
+         });
+
+
+
+         return { organizationUrl, token, connect, connectError, teamProjects, project, workItemTypes, isConnecting };
 
          // const client = inject<EonixClient>(EONIX_CLIENT_INJECTION_KEY)!;
          // const boardQ = boardQuery(props.boardId);
