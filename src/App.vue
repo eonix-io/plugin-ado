@@ -42,7 +42,6 @@
    * {
       font-family: "Montserrat", sans-serif;
       font-size: 14px;
-      font-weight: 600 !important;
    }
 
    html,
@@ -73,6 +72,10 @@
          cursor: not-allowed;
          background-color: #e9ecef !important;
       }
+   }
+
+   input[type="checkbox"] + label {
+      margin-left: 0.5rem;
    }
 
    .border,

@@ -59,12 +59,21 @@
             Loaded {{workItems.length}} work items
          </div>
       </div>
-      <div class="row mappings" v-if="mappings">
+      <div class="row mappings" v-if="mappings && workItems && workItems.length">
          <div class="col">
-            <div class="row" v-for="m of mappings" :key="m.referenceName">
+            <div class="row">
                <div class="col">
-                  {{m.name}}
-                  <img v-for="i of m.usedTypeIconUrls" :key="i" :src="i">
+                  <input type="checkbox" v-model="mappingFilters.hideValueless" for="hideValuelessFilter">
+                  <label for="hideValuelessFilter">Hide fields with no values</label>
+               </div>
+            </div>
+            <div class="row" v-for="m of filteredMappings" :key="m.referenceName">
+               <div class="col">
+                  <div>
+                     <span :class="{'fw-bold': m.hasValues}">{{m.name}}</span>
+                     <img v-for="i of m.itemTypes" :key="i" :src="i.iconUrl">
+                  </div>
+                  <div>{{m.helpText}}</div>
                </div>
             </div>
          </div>
@@ -74,9 +83,9 @@
 
 <script lang="ts">
 
-   import { computed, defineComponent, ref, watch } from 'vue';
+   import { computed, defineComponent, reactive, ref, watch } from 'vue';
    import { CoreRestClient, TeamProjectReference } from 'azure-devops-extension-api/Core';
-   import { IVssRestClientOptions } from 'azure-devops-extension-api/Common/Context';
+   import type { IVssRestClientOptions } from 'azure-devops-extension-api/Common/Context';
    import { ReportingWorkItemRevisionsFilter, WorkItem, WorkItemTrackingRestClient, WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
 
    export default defineComponent({
@@ -209,14 +218,21 @@
                   let map = dict[field.referenceName];
                   if (!map) {
                      map = {
-                        usedTypeIconUrls: [],
+                        hasValues: false,
+                        itemTypes: [],
                         name: field.name,
                         helpText: field.helpText,
                         referenceName: field.referenceName
                      };
                      dict[field.referenceName] = map;
                   }
-                  map.usedTypeIconUrls.push(type.icon.url);
+
+                  map.itemTypes.push({
+                     iconUrl: type.icon.url,
+                     numTasksWithValue: workItems.value?.filter(w => w.fields[field.referenceName]).length ?? 0
+                  });
+
+                  map.hasValues = map.itemTypes.some(t => t.numTasksWithValue);
                }
             }
             const values = Object.values(dict);
@@ -224,7 +240,17 @@
             return values;
          });
 
-         return { organizationUrl, token, connect, connectError, teamProjects, project, workItemTypes, isConnecting, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, loadingTasksMessage, workItems };
+         const mappingFilters = reactive({
+            hideValueless: true
+         });
+         const filteredMappings = computed(() => {
+            return mappings.value?.filter(v => {
+               if (mappingFilters.hideValueless && !v.hasValues) { return false; }
+               return true;
+            });
+         });
+
+         return { organizationUrl, token, connect, connectError, teamProjects, project, workItemTypes, isConnecting, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, loadingTasksMessage, workItems, filteredMappings, mappingFilters };
 
          // const client = inject<EonixClient>(EONIX_CLIENT_INJECTION_KEY)!;
          // const boardQ = boardQuery(props.boardId);
@@ -242,7 +268,13 @@
       name: string;
       referenceName: string;
       helpText: string;
-      usedTypeIconUrls: string[];
+      hasValues: boolean;
+      itemTypes: IFieldItemType[];
+   }
+
+   interface IFieldItemType {
+      iconUrl: string;
+      numTasksWithValue: number;
    }
 
 </script>
