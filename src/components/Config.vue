@@ -167,7 +167,13 @@
             return it.name.toLowerCase().replaceAll(' ', '-');
          };
 
-         const { workItems: workItemFields, status: loadingTasksMessage } = useWorkItems(project, restOptions, Infinity);
+         const reportFiels = computed(() => {
+            if (!workItemTypes.value) { return null; }
+            const fields = workItemTypes.value.flatMap(t => t.fields.map(f => f.referenceName));
+            return fields;
+         });
+
+         const { workItems: workItemFields, status: loadingTasksMessage } = useWorkItems(project, reportFiels, restOptions, 600);
 
          const selectedWorkItemTypes = ref<WorkItemType[]>([]);
 
@@ -198,7 +204,8 @@
             const ret: Record<string, string | null | undefined> = {};
             if (!filteredMappings.value || !workItemFields.value || !taskId.value) { return ret; }
             for (const field of filteredMappings.value) {
-               const value = workItemFields.value[field.referenceName].find(v => v.itemId == taskId.value);
+               const fieldValues = workItemFields.value[field.referenceName];
+               const value = fieldValues?.find(v => v.itemId == taskId.value);
                ret[field.referenceName] = value?.value;
             }
             return ret;

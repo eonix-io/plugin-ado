@@ -1,47 +1,59 @@
 
 import { IVssRestClientOptions } from 'azure-devops-extension-api/Common/Context';
 import { TeamProjectReference } from 'azure-devops-extension-api/Core';
-import { ReportingWorkItemRevisionsFilter, WorkItem, WorkItemTrackingRestClient } from 'azure-devops-extension-api/WorkItemTracking';
+import { WorkItem, WorkItemBatchGetRequest, WorkItemExpand, WorkItemTrackingRestClient } from 'azure-devops-extension-api/WorkItemTracking';
 import { ref, Ref, watch } from 'vue';
 
 /** Loads WorkItems (tasks) for a project and aggregates the values into an object by the field's referenceName */
-export function useWorkItems(project: Ref<TeamProjectReference | null>, restOptions: Ref<IVssRestClientOptions>, batchLimit: number): { workItems: Ref<WorkItemFields | null>, status: Ref<string | null> } {
+export function useWorkItems(project: Ref<TeamProjectReference | null>, fields: Ref<string[] | null>, restOptions: Ref<IVssRestClientOptions>, maxItemsToLoad: number): { workItems: Ref<WorkItemFields | null>, status: Ref<string | null> } {
 
    const status = ref<string | null>(null);
    const workItems = ref<WorkItemFields | null>(null);
 
-   watch(project, async thisProject => {
+   watch([project, fields], async results => {
+
+      const [thisProject, fields] = results;
 
       workItems.value = null;
-      if (!thisProject) {
+      if (!thisProject || !fields) {
          return;
       }
 
-      const filter: Partial<ReportingWorkItemRevisionsFilter> = {
-         includeDeleted: false,
-         includeLatestOnly: true
-      };
-
-      let batchNum = 1;
-      status.value = `Loading tasks batch ${batchNum}`;
       const client = new WorkItemTrackingRestClient(restOptions.value);
 
-      let batchItems = await client.readReportingRevisionsPost(filter as ReportingWorkItemRevisionsFilter, thisProject.name);
+      status.value = 'Loading workitem id list';
+      const wiqlResult = await client.queryByWiql({ query: 'Select [Id] From WorkItems order by [System.CreatedDate] desc' }, thisProject.name);
+      if (project.value !== thisProject) { return; }
+
+      const allIds = wiqlResult.workItems.map(wi => wi.id);
+
+      let batchNum = 0;
+      status.value = `Loading tasks batch ${batchNum + 1}`;
+
+      const getWorkItemRequest = () => {
+         const start = batchNum * 200;
+         if (start > maxItemsToLoad) { return null; }
+         let end = start + 200;
+         if (end > allIds.length) { end = allIds.length; }
+         if (end > maxItemsToLoad) { end = maxItemsToLoad; }
+         if (start >= end) { return null; }
+         const ids = allIds.slice(start, end);
+         return {
+            ids,
+            $expand: WorkItemExpand.Relations
+         } as WorkItemBatchGetRequest;
+      };
 
       workItems.value = {};
-      while (!batchItems.isLastBatch && project.value === thisProject && batchNum < batchLimit) {
-         workItems.value = aggregate(workItems.value, batchItems.values);
+      let request = getWorkItemRequest();
+      while (request) {
+         status.value = `Loading tasks batch ${batchNum + 1}`;
+         const batchItems = await client.getWorkItemsBatch(request, thisProject.name);
+         if (project.value !== thisProject) { return; }
+         workItems.value = aggregate(workItems.value, batchItems);
          batchNum++;
-         status.value = `Loading tasks batch ${batchNum}`;
-         batchItems = await client.readReportingRevisionsPost(filter as ReportingWorkItemRevisionsFilter, thisProject.name, batchItems.continuationToken);
-
+         request = getWorkItemRequest();
       }
-
-      if (project.value !== thisProject) {
-         return;
-      }
-
-      workItems.value = aggregate(workItems.value, batchItems.values);
 
       status.value = null;
    });
@@ -76,3 +88,25 @@ export interface WorkItemFields {
       itemId: number;
    }[]
 }
+
+/*
+First attempt way of loading all tasks from the reporting endpoint. This works good until we needed the parent/child relationships and attachment links
+
+      const filter: Partial<ReportingWorkItemRevisionsFilter> = {
+         includeDeleted: false,
+         includeLatestOnly: true,
+         fields
+      };
+
+      let batchItems = await client.readReportingRevisionsPost(filter as ReportingWorkItemRevisionsFilter, thisProject.name);
+      if (project.value !== thisProject) { return; }
+
+      workItems.value = {};
+      while (!batchItems.isLastBatch && project.value === thisProject && batchNum < batchLimit) {
+         workItems.value = aggregate(workItems.value, batchItems.values);
+         batchNum++;
+         status.value = `Loading tasks batch ${batchNum}`;
+         batchItems = await client.readReportingRevisionsPost(filter as ReportingWorkItemRevisionsFilter, thisProject.name, batchItems.continuationToken);
+      }
+      if (project.value !== thisProject) { return; }
+*/
