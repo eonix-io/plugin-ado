@@ -2,8 +2,7 @@
 // eslint-disable-next-line no-undef
 module.exports = {
 
-    //Needed to compile templates from string client side which is used by, at time of writing, card ux. Adds about 60kB to the vendor bundle
-    runtimeCompiler: true,
+    css: { extract: false },
 
     configureWebpack: config => {
         // eslint-disable-next-line no-undef
