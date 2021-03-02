@@ -62,30 +62,28 @@
                <label for="hideValuelessFilter">Hide fields with no values</label>
             </div>
 
-            <table class="table table-hover">
-               <thead>
-                  <tr>
-                     <td>Field</td>
-                     <td>
-                        <input class="form-control" placeholder="Task Id" v-model.number.lazy="taskId">
-                     </td>
-                  </tr>
-               </thead>
-               <tbody>
-                  <tr v-for="m of filteredMappings" :key="m.referenceName">
-                     <td>
+            <div class="list-group list-group-flush">
+               <div class="list-group-item list-group-item-action pb-0">
+                  <div class="row mb-0">
+                     <div class="col-3">Fields</div>
+                     <div class="col"><input class="form-control" placeholder="Task Id" v-model.number.lazy="taskId"></div>
+                  </div>
+               </div>
+               <div class="list-group-item list-group-item-action" v-for="m of filteredMappings" :key="m.referenceName">
+                  <div class="row mb-0">
+                     <div class="col-3">
                         <div>
                            <span :class="{'fw-bold': m.hasValues}">{{m.name}}</span>
                            <img v-for="i of m.itemTypes" :key="i.iconUrl" :src="i.iconUrl">
                         </div>
                         <div>{{m.helpText}}</div>
-                     </td>
-                     <td>
+                     </div>
+                     <div class="col text-break">
                         {{taskValues[m.referenceName]}}
-                     </td>
-                  </tr>
-               </tbody>
-            </table>
+                     </div>
+                  </div>
+               </div>
+            </div>
 
          </div>
       </div>
@@ -199,7 +197,7 @@
             });
          });
 
-         const taskId = ref<number | null>(null);
+         const taskId = ref<number | null>(process.env.VUE_APP_TEST_TASK_ID ? parseInt(process.env.VUE_APP_TEST_TASK_ID) : null);
          const taskValues = computed(() => {
             const ret: Record<string, string | null | undefined> = {};
             if (!filteredMappings.value || !workItemFields.value || !taskId.value) { return ret; }
