@@ -57,19 +57,22 @@
       <div class="row mappings" v-if="mappings && workItemFields">
          <div class="col">
 
-            <div>
+            <h3 class="d-inline-block mb-2">ADO Fields</h3>
+            <div class="d-inline-block ms-3">
                <input type="checkbox" v-model="mappingFilters.hasValue" for="hideValuelessFilter">
                <label for="hideValuelessFilter">Hide fields with no values</label>
             </div>
 
-            <div class="list-group list-group-flush">
-               <div class="list-group-item list-group-item-action pb-0">
-                  <div class="row mb-0">
-                     <div class="col-3">Fields</div>
-                     <div class="col"><input class="form-control" placeholder="Task Id" v-model.number.lazy="taskId"></div>
+            <div class="row">
+               <div class="col">
+                  <div class="form-floating"><input class="form-control" placeholder="*" v-model.number.lazy="taskId">
+                     <label>Display values from Task Id</label>
                   </div>
                </div>
-               <div class="list-group-item list-group-item-action" v-for="m of filteredMappings" :key="m.referenceName">
+            </div>
+
+            <div class="list-group list-group-flush">
+               <div class="list-group-item" v-for="m of filteredMappings" :key="m.referenceName">
                   <div class="row mb-0">
                      <div class="col-3">
                         <div>
@@ -80,6 +83,15 @@
                      </div>
                      <div class="col text-break">
                         {{taskValues[m.referenceName]}}
+                     </div>
+                     <div class="col-4">
+                        <div class="form-floating">
+                           <select class="form-control" placeholder="*" @click.stop>
+                              <option>Ignore</option>
+                              <option>Create New</option>
+                           </select>
+                           <label>Eonix Input</label>
+                        </div>
                      </div>
                   </div>
                </div>
