@@ -88,25 +88,3 @@ export interface WorkItemFields {
       itemId: number;
    }[]
 }
-
-/*
-First attempt way of loading all tasks from the reporting endpoint. This works good until we needed the parent/child relationships and attachment links
-
-      const filter: Partial<ReportingWorkItemRevisionsFilter> = {
-         includeDeleted: false,
-         includeLatestOnly: true,
-         fields
-      };
-
-      let batchItems = await client.readReportingRevisionsPost(filter as ReportingWorkItemRevisionsFilter, thisProject.name);
-      if (project.value !== thisProject) { return; }
-
-      workItems.value = {};
-      while (!batchItems.isLastBatch && project.value === thisProject && batchNum < batchLimit) {
-         workItems.value = aggregate(workItems.value, batchItems.values);
-         batchNum++;
-         status.value = `Loading tasks batch ${batchNum}`;
-         batchItems = await client.readReportingRevisionsPost(filter as ReportingWorkItemRevisionsFilter, thisProject.name, batchItems.continuationToken);
-      }
-      if (project.value !== thisProject) { return; }
-*/

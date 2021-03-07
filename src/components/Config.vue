@@ -63,26 +63,14 @@
                <label for="hideValuelessFilter">Hide fields with no values</label>
             </div>
 
-            <div class="row">
-               <div class="col">
-                  <div class="form-floating"><input class="form-control" placeholder="*" v-model.number.lazy="taskId">
-                     <label>Display values from Task Id</label>
-                  </div>
-               </div>
-            </div>
-
             <div class="list-group list-group-flush">
                <div class="list-group-item" v-for="m of filteredMappings" :key="m.referenceName">
                   <div class="row mb-0">
                      <div class="col-3">
                         <div>
-                           <span :class="{'fw-bold': m.hasValues}">{{m.name}}</span>
-                           <img v-for="i of m.itemTypes" :key="i.iconUrl" :src="i.iconUrl">
+                           <span :class="{'fw-bold': m.hasValues}">{{m.referenceName}}</span>
                         </div>
                         <div>{{m.helpText}}</div>
-                     </div>
-                     <div class="col text-break">
-                        {{taskValues[m.referenceName]}}
                      </div>
                      <div class="col-4">
                         <div class="form-floating">
@@ -202,26 +190,16 @@
          const mappingFilters = reactive({
             hasValue: true
          });
+
          const filteredMappings = computed(() => {
             return mappings.value?.filter(v => {
                if (mappingFilters.hasValue && !v.hasValues) { return false; }
                return true;
             });
          });
+         
 
-         const taskId = ref<number | null>(process.env.VUE_APP_TEST_TASK_ID ? parseInt(process.env.VUE_APP_TEST_TASK_ID) : null);
-         const taskValues = computed(() => {
-            const ret: Record<string, string | null | undefined> = {};
-            if (!filteredMappings.value || !workItemFields.value || !taskId.value) { return ret; }
-            for (const field of filteredMappings.value) {
-               const fieldValues = workItemFields.value[field.referenceName];
-               const value = fieldValues?.find(v => v.itemId == taskId.value);
-               ret[field.referenceName] = value?.value;
-            }
-            return ret;
-         });
-
-         return { organizationUrl, token, connect, connectError, teamProjects, project, workItemTypes, isConnecting, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, loadingTasksMessage, workItemFields, filteredMappings, mappingFilters, taskId, taskValues };
+         return { organizationUrl, token, connect, connectError, teamProjects, project, workItemTypes, isConnecting, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, loadingTasksMessage, workItemFields, filteredMappings, mappingFilters };
 
          // const client = inject<EonixClient>(EONIX_CLIENT_INJECTION_KEY)!;
          // const boardQ = boardQuery(props.boardId);
@@ -232,8 +210,7 @@
          // onUnmounted(() => board$.unsubscribe());
 
          // return { board };
-      }
-   });
+      
 
 </script>
 
