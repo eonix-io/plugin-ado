@@ -10,7 +10,7 @@
 
 <script lang="ts">
    import { defineComponent } from 'vue';
-   import Config from './components/Config.vue';
+   import Config from './components/config/Config.vue';
 
    export default defineComponent({
       name: 'App',

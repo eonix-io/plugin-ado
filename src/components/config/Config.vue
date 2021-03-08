@@ -96,9 +96,9 @@
    import { CoreRestClient, TeamProjectReference } from 'azure-devops-extension-api/Core';
    import type { IVssRestClientOptions } from 'azure-devops-extension-api/Common/Context';
    import { WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
-   import { useWorkItems } from './useWorkItems';
-   import { useWorkItemTypes } from './useWorkItemTypes';
-   import { useFieldMappings } from './useFieldMappings';
+   import { useWorkItems } from '../config/useWorkItems';
+   import { useWorkItemTypes } from '../config/useWorkItemTypes';
+   import { useFieldMappings } from '../config/useFieldMappings';
 
    export default defineComponent({
       props: {
