@@ -64,22 +64,13 @@
             </div>
 
             <div class="list-group list-group-flush">
-               <div class="list-group-item" v-for="m of filteredMappings" :key="m.referenceName">
+               <div role="button" class="list-group-item list-group-item-action" v-for="m of filteredMappings" :key="m.referenceName" @click="selectedReferenceName = m.referenceName">
                   <div class="row mb-0">
-                     <div class="col-3">
+                     <div class="col">
                         <div>
                            <span :class="{'fw-bold': m.hasValues}">{{m.referenceName}}</span>
                         </div>
                         <div>{{m.helpText}}</div>
-                     </div>
-                     <div class="col-4">
-                        <div class="form-floating">
-                           <select class="form-control" placeholder="*" @click.stop>
-                              <option>Ignore</option>
-                              <option>Create New</option>
-                           </select>
-                           <label>Eonix Input</label>
-                        </div>
                      </div>
                   </div>
                </div>
@@ -87,6 +78,8 @@
 
          </div>
       </div>
+
+      <field-modal v-if="selectedReferenceName" :referenceName="selectedReferenceName" :restOptions="restOptions" @close="selectedReferenceName=null"></field-modal>
    </div>
 </template>
 
@@ -99,14 +92,16 @@
    import { useWorkItems } from '../config/useWorkItems';
    import { useWorkItemTypes } from '../config/useWorkItemTypes';
    import { useFieldMappings } from '../config/useFieldMappings';
+   import FieldModal from './FieldModal.vue';
 
    export default defineComponent({
+      components: { FieldModal },
       props: {
          //boardId: { type: String as () => UUID, required: true }
       },
       setup() {
 
-         const organizationUrl = ref<string>(process.env.VUE_APP_TEST_ORG_URL?.trimEnd('/') + '/' ?? '');
+         const organizationUrl = ref<string>(process.env.VUE_APP_TEST_ORG_URL ? process.env.VUE_APP_TEST_ORG_URL.trimEnd('/') + '/' : '');
          const token = ref<string>(process.env.VUE_APP_TEST_TOKEN ?? '');
 
          const restOptions = computed<IVssRestClientOptions>(() => {
@@ -154,6 +149,7 @@
 
          watch(workItemTypes, itemTypes => {
             selectedWorkItemTypes.value = [];
+            selectedReferenceName.value = null;
             if (!itemTypes) { return; }
             if (!process.env?.VUE_APP_TEST_TYPES) { return; }
             const testTypes = itemTypes.filter(t => (process.env.VUE_APP_TEST_TYPES as string).includes(t.name));
@@ -198,8 +194,9 @@
             });
          });
 
+         const selectedReferenceName = ref<string | null>(null);
 
-         return { organizationUrl, token, connect, connectError, teamProjects, project, workItemTypes, isConnecting, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, loadingTasksMessage, workItemFields, filteredMappings, mappingFilters };
+         return { organizationUrl, token, connect, connectError, teamProjects, project, workItemTypes, isConnecting, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, loadingTasksMessage, workItemFields, filteredMappings, mappingFilters, restOptions, selectedReferenceName };
 
          // const client = inject<EonixClient>(EONIX_CLIENT_INJECTION_KEY)!;
          // const boardQ = boardQuery(props.boardId);
