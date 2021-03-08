@@ -197,7 +197,7 @@
                return true;
             });
          });
-         
+
 
          return { organizationUrl, token, connect, connectError, teamProjects, project, workItemTypes, isConnecting, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, loadingTasksMessage, workItemFields, filteredMappings, mappingFilters };
 
@@ -210,7 +210,10 @@
          // onUnmounted(() => board$.unsubscribe());
 
          // return { board };
-      
+
+      }
+   });
+
 
 </script>
 
