@@ -1,6 +1,6 @@
 import { IVssRestClientOptions } from 'azure-devops-extension-api';
 import { CoreRestClient, TeamProjectReference } from 'azure-devops-extension-api/Core';
-import { WorkItem, WorkItemBatchGetRequest, WorkItemExpand, WorkItemTrackingRestClient, WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
+import { GetFieldsExpand, WorkItem, WorkItemBatchGetRequest, WorkItemExpand, WorkItemField, WorkItemTrackingRestClient, WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
 import { reactive, ref, Ref } from 'vue';
 
 export class AdoClient {
@@ -85,6 +85,19 @@ export class AdoClient {
       })();
 
       return workItems;
+   }
+
+
+   private _workItemFields: Ref<WorkItemField[] | null> | undefined;
+   public getWorkItemFields(): Ref<WorkItemField[] | null> {
+      if (!this._workItemFields) {
+         this._workItemFields = ref(null);
+         //When project changes, get list of workItemTypes
+         const workItemClient = new WorkItemTrackingRestClient(this._restOptions);
+         workItemClient.getFields(undefined, GetFieldsExpand.ExtensionFields).then(f => this._workItemFields!.value = f.sort((a, b) => a.name.localeCompare(b.name)));
+      }
+      return this._workItemFields;
+
    }
 
 }
