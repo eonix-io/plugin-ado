@@ -1,27 +1,7 @@
 
 <template>
    <div class="container-fluid">
-      <div class="row">
-         <div class="col">
-            <div class="form-floating">
-               <input class="form-control" id="organizationUrl" placeholder="*" v-model="organizationUrl">
-               <label for="organizationUrl">Organization URL</label>
-            </div>
-         </div>
-      </div>
-      <div class="row">
-         <div class="col">
-            <div class="form-floating">
-               <input class="form-control" id="token" placeholder="*" v-model="token">
-               <label for="token">Token</label>
-            </div>
-         </div>
-      </div>
-      <div class="row" v-if="token && organizationUrl">
-         <div class="col">
-            <button class="btn btn-primary" :disabled="isConnecting" @click="connect">Connect</button>
-         </div>
-      </div>
+      <connection-info @connected="onConnect"></connection-info>
       <div class="row" v-if="teamProjects">
          <div class="col">
             <div class="form-floating">
@@ -49,12 +29,7 @@
             </div>
          </div>
       </div>
-      <div class="row" v-if="loadingTasksMessage">
-         <div class="col">
-            {{loadingTasksMessage}}
-         </div>
-      </div>
-      <div class="row mappings" v-if="mappings && workItemFields">
+      <div class="row mappings" v-if="mappings && filteredMappings">
          <div class="col">
 
             <h3 class="d-inline-block mb-2">ADO Fields</h3>
@@ -79,61 +54,33 @@
          </div>
       </div>
 
-      <field-modal v-if="selectedReferenceName" :referenceName="selectedReferenceName" :restOptions="restOptions" @close="selectedReferenceName=null"></field-modal>
+      <field-modal v-if="selectedReferenceName" :referenceName="selectedReferenceName" :client="adoClient" @close="selectedReferenceName=null"></field-modal>
    </div>
 </template>
 
 <script lang="ts">
 
    import { computed, defineComponent, reactive, ref, watch } from 'vue';
-   import { CoreRestClient, TeamProjectReference } from 'azure-devops-extension-api/Core';
-   import type { IVssRestClientOptions } from 'azure-devops-extension-api/Common/Context';
+   import { TeamProjectReference } from 'azure-devops-extension-api/Core';
    import { WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
-   import { useWorkItems } from '../config/useWorkItems';
-   import { useWorkItemTypes } from '../config/useWorkItemTypes';
-   import { useFieldMappings } from '../config/useFieldMappings';
+   import { useFieldMappings } from './useFieldMappings';
    import FieldModal from './FieldModal.vue';
+   import { AdoClient } from '@/services';
+   import ConnectionInfo from './ConnectionInfo.vue';
 
    export default defineComponent({
-      components: { FieldModal },
+      components: { FieldModal, ConnectionInfo },
       props: {
          //boardId: { type: String as () => UUID, required: true }
       },
       setup() {
 
-         const organizationUrl = ref<string>(process.env.VUE_APP_TEST_ORG_URL ? process.env.VUE_APP_TEST_ORG_URL.trimEnd('/') + '/' : '');
-         const token = ref<string>(process.env.VUE_APP_TEST_TOKEN ?? '');
-
-         const restOptions = computed<IVssRestClientOptions>(() => {
-            return {
-               rootPath: organizationUrl.value,
-               authTokenProvider: {
-                  getAuthorizationHeader() {
-                     return Promise.resolve(`Basic ${btoa(`:${token.value}`)}`);
-                  }
-               }
-            };
-         });
-
-         watch(token, () => teamProjects.value = null);
-         watch(organizationUrl, () => teamProjects.value = null);
-
-         const connectError = ref<string | null>(null);
+         const adoClient = ref<AdoClient | null>(null);
          const teamProjects = ref<TeamProjectReference[] | null>(null);
-         const isConnecting = ref(false);
-         const connect = async () => {
-            isConnecting.value = true;
-            connectError.value = null;
-            teamProjects.value = null;
-            const coreClient = new CoreRestClient(restOptions.value);
-            try {
-               teamProjects.value = await coreClient.getProjects();
-            } catch (e) {
-               console.error('Error getting projects', e);
-               connectError.value = 'Error getting project listing. This usually means that your project url or token is incorrect';
-            } finally {
-               isConnecting.value = false;
-            }
+
+         const onConnect = async (client: AdoClient) => {
+            adoClient.value = client;
+            teamProjects.value = await client.getProjects();
          };
 
          const project = ref<TeamProjectReference | null>(null);
@@ -145,7 +92,11 @@
             if (process.env?.VUE_APP_TEST_PROJECT) { project.value = projects.find(p => p.name === process.env?.VUE_APP_TEST_PROJECT) ?? null; }
          });
 
-         const workItemTypes = useWorkItemTypes(project, restOptions);
+         const workItemTypes = computed(() => {
+            if (!adoClient.value) { return null; }
+            if (!project.value) { return null; }
+            return adoClient.value.getWorkItemTypes(project.value.name).value;
+         });
 
          watch(workItemTypes, itemTypes => {
             selectedWorkItemTypes.value = [];
@@ -161,13 +112,11 @@
             return it.name.toLowerCase().replaceAll(' ', '-');
          };
 
-         const reportFiels = computed(() => {
-            if (!workItemTypes.value) { return null; }
-            const fields = workItemTypes.value.flatMap(t => t.fields.map(f => f.referenceName));
-            return fields;
+         const workItems = computed(() => {
+            if (!adoClient.value) { return null; }
+            if (!project.value) { return null; }
+            return adoClient.value.getWorkItems(project.value.name).value;
          });
-
-         const { workItems: workItemFields, status: loadingTasksMessage } = useWorkItems(project, reportFiels, restOptions, 600);
 
          const selectedWorkItemTypes = ref<WorkItemType[]>([]);
 
@@ -181,7 +130,7 @@
             }
          };
 
-         const mappings = useFieldMappings(selectedWorkItemTypes, workItemFields);
+         const mappings = useFieldMappings(selectedWorkItemTypes, workItems);
 
          const mappingFilters = reactive({
             hasValue: true
@@ -196,7 +145,7 @@
 
          const selectedReferenceName = ref<string | null>(null);
 
-         return { organizationUrl, token, connect, connectError, teamProjects, project, workItemTypes, isConnecting, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, loadingTasksMessage, workItemFields, filteredMappings, mappingFilters, restOptions, selectedReferenceName };
+         return { teamProjects, onConnect, project, workItemTypes, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, filteredMappings, mappingFilters, selectedReferenceName, adoClient };
 
          // const client = inject<EonixClient>(EONIX_CLIENT_INJECTION_KEY)!;
          // const boardQ = boardQuery(props.boardId);

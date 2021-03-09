@@ -7,12 +7,12 @@
 
 <script lang="ts">
 
-   import { IVssRestClientOptions } from 'node_modules/azure-devops-extension-api';
+   import { AdoClient } from '@/services';
    import { defineComponent } from 'vue';
 
    export default defineComponent({
       props: {
-         restOptions: { type: Object as () => IVssRestClientOptions, required: true },
+         client: { type: Object as () => AdoClient, required: true },
          referenceName: { type: String, require: true }
       },
       setup() {

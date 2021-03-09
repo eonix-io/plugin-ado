@@ -1,8 +1,7 @@
-import { WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
+import { WorkItem, WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
 import { computed, Ref } from 'vue';
-import { WorkItemFields } from './useWorkItems';
 
-export function useFieldMappings(selectedWorkItemTypes: Ref<WorkItemType[]>, workItemFields: Ref<WorkItemFields | null>): Ref<IFieldMapping[] | null> {
+export function useFieldMappings(selectedWorkItemTypes: Ref<WorkItemType[]>, workItems: Ref<WorkItem[] | null>): Ref<IFieldMapping[] | null> {
    return computed<IFieldMapping[] | null>(() => {
 
       if (!selectedWorkItemTypes.value.length) { return null; }
@@ -10,6 +9,9 @@ export function useFieldMappings(selectedWorkItemTypes: Ref<WorkItemType[]>, wor
       const dict: Record<string, IFieldMapping> = {};
       const sortedTypes = [...selectedWorkItemTypes.value].sort((a, b) => a.name.localeCompare(b.name));
       for (const type of sortedTypes) {
+
+         const typeWorkItems = workItems.value?.filter(wi => wi.fields['System.WorkItemType'] === type.name) ?? [];
+
          for (const field of type.fields) {
             let map = dict[field.referenceName];
             if (!map) {
@@ -23,11 +25,12 @@ export function useFieldMappings(selectedWorkItemTypes: Ref<WorkItemType[]>, wor
                dict[field.referenceName] = map;
             }
 
-            const fieldValues = (workItemFields.value ?? {})[field.referenceName] ?? [];
+
+            const fieldValues = typeWorkItems.map(wi => wi.fields[field.referenceName]).reduce((prev, cur) => { if (cur) { prev.push(cur); } return prev; }, []);
 
             map.itemTypes.push({
                iconUrl: type.icon.url,
-               numTasksWithValue: fieldValues.filter(v => v.itemType === type.name).length
+               numTasksWithValue: fieldValues.length
             });
 
             map.hasValues = map.itemTypes.some(t => t.numTasksWithValue);
