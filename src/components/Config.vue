@@ -54,13 +54,13 @@
          </div>
       </div>
 
-      <field-modal v-if="selectedReferenceName" :referenceName="selectedReferenceName" :client="adoClient" @close="selectedReferenceName=null"></field-modal>
+      <field-modal v-if="selectedReferenceName" :referenceName="selectedReferenceName" @close="selectedReferenceName=null"></field-modal>
    </div>
 </template>
 
 <script lang="ts">
 
-   import { computed, defineComponent, reactive, ref, watch } from 'vue';
+   import { computed, defineComponent, provide, reactive, ref, watch } from 'vue';
    import { TeamProjectReference } from 'azure-devops-extension-api/Core';
    import { WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
    import { useFieldMappings } from './useFieldMappings';
@@ -76,6 +76,7 @@
       setup() {
 
          const adoClient = ref<AdoClient | null>(null);
+         provide('ADO_CLIENT', adoClient);
          const teamProjects = ref<TeamProjectReference[] | null>(null);
 
          const onConnect = async (client: AdoClient) => {
@@ -145,7 +146,7 @@
 
          const selectedReferenceName = ref<string | null>(null);
 
-         return { teamProjects, onConnect, project, workItemTypes, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, filteredMappings, mappingFilters, selectedReferenceName, adoClient };
+         return { teamProjects, onConnect, project, workItemTypes, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, filteredMappings, mappingFilters, selectedReferenceName };
 
          // const client = inject<EonixClient>(EONIX_CLIENT_INJECTION_KEY)!;
          // const boardQ = boardQuery(props.boardId);

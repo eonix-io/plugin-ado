@@ -88,14 +88,18 @@ export class AdoClient {
    }
 
 
-   private _workItemFields: Ref<WorkItemField[] | null> | undefined;
+   private _workItemFields: Ref<WorkItemField[] | null> | null = null;
    public getWorkItemFields(): Ref<WorkItemField[] | null> {
-      if (!this._workItemFields) {
-         this._workItemFields = ref(null);
-         //When project changes, get list of workItemTypes
-         const workItemClient = new WorkItemTrackingRestClient(this._restOptions);
-         workItemClient.getFields(undefined, GetFieldsExpand.ExtensionFields).then(f => this._workItemFields!.value = f.sort((a, b) => a.name.localeCompare(b.name)));
-      }
+      if (this._workItemFields) { return this._workItemFields; }
+
+      this._workItemFields = ref(null);
+      //When project changes, get list of workItemTypes
+      const workItemClient = new WorkItemTrackingRestClient(this._restOptions);
+      workItemClient.getFields(undefined, GetFieldsExpand.ExtensionFields).then(f => {
+         f.sort((a, b) => a.name.localeCompare(b.name));
+         this._workItemFields!.value = f;
+      });
+
       return this._workItemFields;
 
    }
