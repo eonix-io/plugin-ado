@@ -54,15 +54,15 @@
          </div>
       </div>
 
-      <field-modal v-if="selectedReferenceName" :referenceName="selectedReferenceName" @close="selectedReferenceName=null"></field-modal>
+      <field-modal v-if="selectedField" :field="selectedField" @close="selectedReferenceName=null"></field-modal>
    </div>
 </template>
 
 <script lang="ts">
 
    import { computed, defineComponent, provide, reactive, ref, watch } from 'vue';
-   import { TeamProjectReference } from 'azure-devops-extension-api/Core';
-   import { WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
+   import type { TeamProjectReference } from 'azure-devops-extension-api/Core';
+   import type { WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
    import { useFieldMappings } from './useFieldMappings';
    import FieldModal from './FieldModal.vue';
    import { AdoClient } from '@/services';
@@ -144,9 +144,16 @@
             });
          });
 
-         const selectedReferenceName = ref<string | null>(null);
+         const fields = computed(() => {
+            if (!adoClient.value) { return null; }
+            const fields = adoClient.value.getWorkItemFields();
+            return fields.value;
+         });
 
-         return { teamProjects, onConnect, project, workItemTypes, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, filteredMappings, mappingFilters, selectedReferenceName };
+         const selectedReferenceName = ref<string | null>(null);
+         const selectedField = computed(() => fields.value?.find(f => f.referenceName === selectedReferenceName.value) ?? null);
+
+         return { teamProjects, onConnect, project, workItemTypes, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, filteredMappings, mappingFilters, selectedReferenceName, selectedField };
 
          // const client = inject<EonixClient>(EONIX_CLIENT_INJECTION_KEY)!;
          // const boardQ = boardQuery(props.boardId);
