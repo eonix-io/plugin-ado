@@ -54,7 +54,7 @@
          </div>
       </div>
 
-      <field-modal v-if="selectedField" :field="selectedField" @close="selectedReferenceName=null"></field-modal>
+      <field-modal v-if="selectedField" :field="selectedField" :project="project.name" @close="selectedReferenceName=null"></field-modal>
    </div>
 </template>
 
