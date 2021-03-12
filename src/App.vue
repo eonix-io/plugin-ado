@@ -2,15 +2,16 @@
    <div class="container m-5 py-5 bg-beige">
       <div class="row">
          <div class="col">
-            <config></config>
+            <config boardId="827236e2-7700-41be-a77a-491c8e9f5d42"></config>
          </div>
       </div>
    </div>
 </template>
 
 <script lang="ts">
-   import { defineComponent } from 'vue';
+   import { defineComponent, provide } from 'vue';
    import Config from './components/Config.vue';
+   import { EonixClient } from '@eonix-io/client';
 
    export default defineComponent({
       name: 'App',
@@ -18,6 +19,14 @@
          Config
       },
       setup() {
+
+         if (!process.env.VUE_APP_EONIX_TOKEN) {
+            throw new Error('Missing eonix token');
+         }
+
+         const eonixClient = new EonixClient(() => process.env.VUE_APP_EONIX_TOKEN, { host: process.env.VUE_APP_EONIX_HOST });
+         provide('EONIX_CLIENT', eonixClient);
+
          return {};
       }
    });

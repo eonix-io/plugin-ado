@@ -54,7 +54,7 @@
          </div>
       </div>
 
-      <field-modal v-if="selectedField" :field="selectedField" :project="project.name" @close="selectedReferenceName=null"></field-modal>
+      <field-modal v-if="selectedField" :boardId="boardId" :field="selectedField" :project="project.name" @close="selectedReferenceName=null"></field-modal>
    </div>
 </template>
 
@@ -67,11 +67,12 @@
    import FieldModal from './FieldModal.vue';
    import { AdoClient } from '@/services';
    import ConnectionInfo from './ConnectionInfo.vue';
+   import { UUID } from '@eonix-io/client';
 
    export default defineComponent({
       components: { FieldModal, ConnectionInfo },
       props: {
-         //boardId: { type: String as () => UUID, required: true }
+         boardId: { type: String as () => UUID, required: true }
       },
       setup() {
 
