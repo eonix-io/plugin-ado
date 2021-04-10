@@ -28,7 +28,7 @@
     "vue": "^3.0.11"
   },
   "devDependencies": {
-    "@eonix-io/ux-core": "0.0.2",
+    "@eonix-io/ux-core": "file:../ux-core",
     "@typescript-eslint/eslint-plugin": "^4.21.0",
     "@typescript-eslint/parser": "^4.21.0",
     "@vue/cli-plugin-typescript": "^4.5.12",

@@ -1,4 +1,6 @@
 
+const path = require('path');
+
 // eslint-disable-next-line no-undef
 module.exports = {
 
@@ -19,5 +21,10 @@ module.exports = {
             //Added this line to drop all console.____ from output in production
             config.optimization.minimizer[0].options.terserOptions.compress.drop_console = true;
         }
+
+        //THis is to fix a Symbol error when using a symlink to ux-core.
+        //https://github.com/vuejs/vue-next/issues/2064
+        config.resolve.alias.vue = path.resolve('./node_modules/vue');
+
     }
 };
