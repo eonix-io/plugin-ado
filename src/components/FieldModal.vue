@@ -7,7 +7,7 @@
 
          <div class="form-floating">
             <select class="form-control" placeholder="*" v-model="inputSelection">
-               <option :value="null">Ignore</option>
+               <option value="ignore">Ignore</option>
                <option v-for="i of schemaInputs" :key="i.id" :value="i.id">{{i.name}}</option>
                <option value="new">New</option>
             </select>
@@ -56,10 +56,10 @@
 <script lang="ts">
 
    import { AdoClient } from '@/services';
-   import { deepClone, EonixClient, IInput, IInputBase, InputType, schemaForBoardQuery, UUID } from '@eonix-io/client';
+   import { deepClone, EonixClient, IInputBase, InputType, ISchema, isTextInput, ITextInput, ITextOptions, putSchemaMutation, schemaForBoardQuery, schemaToSchemaInput, TextType, uuid, UUID, uuidEmpty } from '@eonix-io/client';
    import type { WorkItemField } from 'azure-devops-extension-api/WorkItemTracking';
    import { computed, defineComponent, inject, onUnmounted, ref, Ref, watch } from 'vue';
-   import { IPluginSchema } from './IPluginSchema';
+   import { IInputAppData } from './IAppData';
 
    export default defineComponent({
       props: {
@@ -75,18 +75,21 @@
          const adoClient = inject<Ref<AdoClient>>('ADO_CLIENT')!;
          const eonixClient = inject<EonixClient>('EONIX_CLIENT')!;
 
-         const schemaInputs = ref<IInputBase<IPluginSchema>[]>([]);
-         const schemaQuery = schemaForBoardQuery<any, IPluginSchema>(props.boardId);
+         let schema: ISchema<any, IInputAppData> | null = null;
+         const schemaInputs = ref<IInputBase<IInputAppData>[]>([]);
+         const schemaQuery = schemaForBoardQuery<any, IInputAppData>(props.boardId);
 
-         const originalInput = ref<IInputBase<IPluginSchema> | null>(null);
-         const dirtyInput = ref<IInputBase<IPluginSchema> | null>(null);
+         const inputSelection = ref<UUID | 'new' | 'ignore'>('ignore');
+
+         const originalInput = ref<IInputBase<IInputAppData> | null>(null);
 
          const schemaSx = eonixClient.watchQuery(schemaQuery).subscribe(s => {
+            schema = s.schemaForBoard;
             schemaInputs.value = [...s.schemaForBoard?.inputs ?? []];
             schemaInputs.value.sort((a, b) => a.name.localeCompare(b.name));
 
-            originalInput.value = s.schemaForBoard?.inputs.find(i => i.appData?.pluginAdo.referenceName === props.field.referenceName) ?? null;
-            dirtyInput.value = deepClone(originalInput.value);
+            originalInput.value = s.schemaForBoard?.inputs.find(i => i.appData?.pluginAdo?.referenceName === props.field.referenceName) ?? null;
+            if (originalInput.value) { inputSelection.value = originalInput.value.id; }
          });
 
          onUnmounted(() => schemaSx.unsubscribe());
@@ -118,8 +121,6 @@
             return values;
          });
 
-         const inputSelection = ref<UUID | 'new' | null>(null);
-
          watch(inputSelection, selection => {
             if (selection === 'new') {
                inputType.value = InputType.Text;
@@ -136,10 +137,60 @@
             return false;
          });
 
-         const isFormValid = ref(true);
+         const isSaving = ref(false);
+         const isFormValid = computed(() => {
+            if (isSaving.value) { return false; }
+            return true;
+         });
 
-         const save = () => {
-            console.log('Save');
+         const save = async () => {
+
+            try {
+
+               isSaving.value = true;
+
+               const newSchema: ISchema<any, IInputAppData> = deepClone(schema) ?? {
+                  id: uuid(),
+                  name: '',
+                  inputs: [],
+                  appData: null,
+                  createdBy: uuidEmpty,
+                  createdDate: 0
+               };
+
+               let inputBase: IInputBase<IInputAppData> | null = null;
+
+               switch (inputType.value!) {
+                  case InputType.Text: {
+
+                     const options: ITextOptions = isTextInput(originalInput.value) ? originalInput.value.options : {
+                        type: TextType.Text,
+                        maxLength: null
+                     };
+
+                     inputBase = {
+                        type: InputType.Text,
+                        id: originalInput.value?.id ?? uuid(),
+                        name: originalInput.value?.name ?? props.field.referenceName,
+                        appData: originalInput.value?.appData ?? null,
+                        options
+                     } as ITextInput;
+
+                     break;
+                  }
+               }
+
+               const { schemaInput, inputs } = schemaToSchemaInput(newSchema);
+
+               const existingIndex = inputs.findIndex(i => i.id === inputBase!.id);
+               if (existingIndex !== -1) { inputs.splice(existingIndex, 1, inputBase!); }
+
+               await putSchemaMutation(eonixClient, schemaInput, inputs, props.boardId);
+
+               emit('close');
+            } finally {
+               isSaving.value = false;
+            }
          };
 
          const cancel = () => {
