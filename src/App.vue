@@ -2,7 +2,7 @@
    <div class="container m-5 py-5 bg-beige">
       <div class="row">
          <div class="col">
-            <config boardId="827236e2-7700-41be-a77a-491c8e9f5d42"></config>
+            <config :boardId="boardId"></config>
          </div>
       </div>
    </div>
@@ -21,13 +21,16 @@
       setup() {
 
          if (!process.env.VUE_APP_EONIX_TOKEN) {
-            throw new Error('Missing eonix token');
+            throw new Error('Missing eonix token config');
          }
+
+         const boardId = process.env.VUE_APP_EONIX_BOARD_ID;
+         if (!boardId) { throw new Error('Missing eonix board id config'); }
 
          const eonixClient = new EonixClient(() => process.env.VUE_APP_EONIX_TOKEN, { host: process.env.VUE_APP_EONIX_HOST });
          provide('EONIX_CLIENT', eonixClient);
 
-         return {};
+         return { boardId };
       }
    });
 </script>
