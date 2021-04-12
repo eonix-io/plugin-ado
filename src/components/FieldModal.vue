@@ -56,9 +56,10 @@
 <script lang="ts">
 
    import { AdoClient } from '@/services';
-   import { deepClone, EonixClient, IInputBase, InputType, ISchema, isTextInput, ITextInput, ITextOptions, putSchemaMutation, schemaForBoardQuery, schemaToSchemaInput, TextType, uuid, UUID, uuidEmpty } from '@eonix-io/client';
+   import { useQueryRef } from '@/services/useQueryRef';
+   import { boardQuery, boardToBoardInput, deepClone, EonixClient, IInputBase, InputType, ISchema, isTextInput, ITextInput, ITextOptions, putBoardMutation, putSchemaMutation, schemaForBoardQuery, schemaToSchemaInput, TextType, uuid, UUID, uuidEmpty } from '@eonix-io/client';
    import type { WorkItemField } from 'azure-devops-extension-api/WorkItemTracking';
-   import { computed, defineComponent, inject, onUnmounted, ref, Ref, watch } from 'vue';
+   import { computed, defineComponent, inject, ref, Ref, watch } from 'vue';
    import { IInputAppData } from './IAppData';
 
    export default defineComponent({
@@ -75,24 +76,25 @@
          const adoClient = inject<Ref<AdoClient>>('ADO_CLIENT')!;
          const eonixClient = inject<EonixClient>('EONIX_CLIENT')!;
 
-         let schema: ISchema<any, IInputAppData> | null = null;
-         const schemaInputs = ref<IInputBase<IInputAppData>[]>([]);
          const schemaQuery = schemaForBoardQuery<any, IInputAppData>(props.boardId);
+         const schema = useQueryRef(eonixClient.watchQuery(schemaQuery), null);
 
          const inputSelection = ref<UUID | 'new' | 'ignore'>('ignore');
-
+         const schemaInputs = ref<IInputBase<IInputAppData>[]>([]);
          const originalInput = ref<IInputBase<IInputAppData> | null>(null);
 
-         const schemaSx = eonixClient.watchQuery(schemaQuery).subscribe(s => {
-            schema = s.schemaForBoard;
-            schemaInputs.value = [...s.schemaForBoard?.inputs ?? []];
+         watch(schema, s => {
+            if (!s?.schemaForBoard) { return; }
+
+            console.debug('Existing schema loaded');
+            schemaInputs.value = [...s.schemaForBoard.inputs ?? []];
             schemaInputs.value.sort((a, b) => a.name.localeCompare(b.name));
 
-            originalInput.value = s.schemaForBoard?.inputs.find(i => i.appData?.pluginAdo?.referenceName === props.field.referenceName) ?? null;
+            originalInput.value = s.schemaForBoard.inputs.find(i => i.appData?.pluginAdo?.referenceName === props.field.referenceName) ?? null;
             if (originalInput.value) { inputSelection.value = originalInput.value.id; }
-         });
+         }, { immediate: true });
 
-         onUnmounted(() => schemaSx.unsubscribe());
+         const board = useQueryRef(eonixClient.watchQuery(boardQuery(props.boardId)), null);
 
          const workItems = computed(() => adoClient.value.getWorkItems(props.project).value);
 
@@ -145,11 +147,16 @@
 
          const save = async () => {
 
+            if (!board.value?.board) {
+               console.error('Board did not exist');
+               return;
+            }
+
             try {
 
                isSaving.value = true;
 
-               const newSchema: ISchema<any, IInputAppData> = deepClone(schema) ?? {
+               const newSchema: ISchema<any, IInputAppData> = deepClone(schema.value?.schemaForBoard) ?? {
                   id: uuid(),
                   name: '',
                   inputs: [],
@@ -172,21 +179,42 @@
                         type: InputType.Text,
                         id: originalInput.value?.id ?? uuid(),
                         name: originalInput.value?.name ?? props.field.referenceName,
-                        appData: originalInput.value?.appData ?? null,
+                        appData: originalInput.value?.appData,
                         options
                      } as ITextInput;
 
                      break;
                   }
+                  default: throw new Error(`${inputType.value} type not implemented`);
                }
+
+               inputBase.appData = { ...inputBase.appData ?? {}, pluginAdo: { referenceName: props.field.referenceName } };
 
                const { schemaInput, inputs } = schemaToSchemaInput(newSchema);
 
                const existingIndex = inputs.findIndex(i => i.id === inputBase!.id);
-               if (existingIndex !== -1) { inputs.splice(existingIndex, 1, inputBase!); }
+               if (existingIndex !== -1) {
+                  inputs.splice(existingIndex, 1, inputBase);
+               } else {
+                  inputs.push(inputBase);
+               }
 
-               await putSchemaMutation(eonixClient, schemaInput, inputs, props.boardId);
+               const isNewSchema = !schema.value?.schemaForBoard;
 
+               console.debug('Starting putSchemaMutation');
+               const putSchemaProm = putSchemaMutation(eonixClient, schemaInput, inputs, props.boardId);
+
+               if (isNewSchema) {
+                  const boardInput = boardToBoardInput(board.value.board);
+                  boardInput.schemaId = newSchema.id;
+                  console.debug('Starting and awaiting putBoardMutation');
+                  await putBoardMutation(eonixClient, boardInput.id, boardInput);
+               }
+
+               console.debug('awaiting putSchemaMutation');
+               await putSchemaProm;
+
+               console.debug('save finished');
                emit('close');
             } finally {
                isSaving.value = false;
