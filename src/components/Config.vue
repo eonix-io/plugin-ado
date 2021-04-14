@@ -39,13 +39,17 @@
             </div>
 
             <div class="list-group list-group-flush">
-               <div role="button" class="list-group-item list-group-item-action" v-for="m of filteredMappings" :key="m.referenceName" @click="selectedReferenceName = m.referenceName">
-                  <div class="row mb-0">
+               <div role="button" class="list-group-item list-group-item-action" v-for="m of filteredMappings" :key="m.mapping.referenceName" @click="selectedReferenceName = m.mapping.referenceName">
+                  <div class="row">
                      <div class="col">
                         <div>
-                           <span :class="{'fw-bold': m.hasValues}">{{m.referenceName}}</span>
+                           <span :class="{'fw-bold': m.mapping.hasValues}">{{m.mapping.referenceName}}</span>
                         </div>
-                        <div>{{m.helpText}}</div>
+                        <div>{{m.mapping.helpText}}</div>
+                     </div>
+                     <div class="col-auto">
+                        <span v-if="m.eonixInputName" class="badge bg-primary p-2">{{m.eonixInputName}}</span>
+                        <span v-else class="text-muted">Ignored</span>
                      </div>
                   </div>
                </div>
@@ -60,21 +64,23 @@
 
 <script lang="ts">
 
-   import { computed, defineComponent, provide, reactive, ref, watch } from 'vue';
+   import { computed, defineComponent, inject, provide, reactive, ref, watch } from 'vue';
    import type { TeamProjectReference } from 'azure-devops-extension-api/Core';
    import type { WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
    import { useFieldMappings } from './useFieldMappings';
    import FieldModal from './FieldModal.vue';
    import { AdoClient } from '@/services';
    import ConnectionInfo from './ConnectionInfo.vue';
-   import { UUID } from '@eonix-io/client';
+   import { EonixClient, IInputBase, schemaForBoardQuery, UUID } from '@eonix-io/client';
+   import { IInputAppData } from './IAppData';
+   import { useQueryRef } from '@/services/useQueryRef';
 
    export default defineComponent({
       components: { FieldModal, ConnectionInfo },
       props: {
          boardId: { type: String as () => UUID, required: true }
       },
-      setup() {
+      setup(props) {
 
          const adoClient = ref<AdoClient | null>(null);
          provide('ADO_CLIENT', adoClient);
@@ -138,10 +144,30 @@
             hasValue: true
          });
 
+
+         const eonixClient = inject<EonixClient>('EONIX_CLIENT')!;
+
+         const schemaQuery = schemaForBoardQuery<any, IInputAppData>(props.boardId);
+         const schema = useQueryRef(eonixClient.watchQuery(schemaQuery), null);
+
+         const schemaInputsByFieldReferenceName = computed<Map<string, IInputBase<IInputAppData>> | null>(() => {
+            const mappedInputs = schema.value?.schemaForBoard?.inputs.filter(i => i.appData?.pluginAdo?.referenceName);
+            if (!mappedInputs) { return null; }
+
+            const map: Map<string, IInputBase<IInputAppData>> = new Map(mappedInputs.map(i => [i.appData!.pluginAdo!.referenceName, i]));
+            return map;
+
+         });
+
          const filteredMappings = computed(() => {
             return mappings.value?.filter(v => {
                if (mappingFilters.hasValue && !v.hasValues) { return false; }
                return true;
+            }).map(m => {
+               return {
+                  mapping: m,
+                  eonixInputName: schemaInputsByFieldReferenceName.value?.get(m.referenceName)?.name ?? null
+               };
             });
          });
 

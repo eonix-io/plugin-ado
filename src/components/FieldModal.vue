@@ -1,6 +1,6 @@
 
 <template>
-   <ex-modal>
+   <ex-modal @close="$emit('close')">
       <div v-if="field">
 
          <h1>{{field.name}}</h1>
