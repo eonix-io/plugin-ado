@@ -16,11 +16,21 @@
 
          <div v-if="inputSelection === 'new'" class="form-floating mt-3">
             <select class="form-control" placeholder="*" v-model="inputType">
-               <option value="text">Text (Recommended)</option>
-               <option value="boolean">Boolean</option>
-               <option value="select">Select</option>
+               <option :value="null"></option>
+               <option value="text">Text{{suggestedType === 'text' ? ' (Recommended}' : ''}}</option>
+               <option value="boolean" :disabled="selectValues.length > 2">Boolean{{suggestedType === 'boolean' ? ' (Recommended}' : ''}}{{selectValues.length > 2 ? ' (Too many possibilities)' : '' }}</option>
+               <option value="select" :disabled="selectValues.length > 50">Select{{suggestedType === 'select' ? ' (Recommended}' : ''}}{{selectValues.length > 50 ? ' (Too many possibilities)' : '' }}</option>
             </select>
             <label>Eonix Input</label>
+         </div>
+
+         <div class="mt-4" v-if="inputType === 'select'">
+            <h3>Select values</h3>
+            <div class="list-group select-list overflow-auto">
+               <div class="list-group-item" v-for="value of selectValues" :key="value">
+                  {{value}}
+               </div>
+            </div>
          </div>
 
          <div class="row mt-5" v-if="isFormDirty">
@@ -41,7 +51,7 @@
 
          <h3 class="mt-4">Example values</h3>
          <div class="list-group">
-            <div class="list-group-item" v-for="v of fieldValues" :key="v.id">
+            <div class="list-group-item" v-for="v of exampleValue" :key="v.id">
                <div class="row">
                   <a href="#" target="_blank" class="col-2 mb-0">{{v.itemType}} {{v.id}}</a>
                   <span class="col mb-0">{{v.value}}</span>
@@ -98,7 +108,38 @@
 
          const workItems = computed(() => adoClient.value.getWorkItems(props.project).value);
 
-         const fieldValues = computed(() => {
+         const selectValues = computed(() => {
+            if (!workItems.value.length) { return null; }
+            const valueCount: any = {};
+            for (let i = 0; i < workItems.value.length; i++) {
+               const item = workItems.value[i];
+               const value = item.fields[props.field.referenceName];
+               if (!value) { continue; }
+               if (valueCount[value] === undefined) {
+                  valueCount[value] = 1;
+               } else {
+                  valueCount[value]++;
+               }
+            }
+            const keys = Object.getOwnPropertyNames(valueCount);
+            keys.sort((a, b) => a.localeCompare(b));
+            return keys;
+         });
+
+         const suggestedType = computed(() => {
+
+            if (!workItems.value) { return InputType.Text; }
+
+            const distinctValues = selectValues.value;
+            if (!distinctValues) { return InputType.Text; }
+
+            if (workItems.value.length > 50 && distinctValues.length < (workItems.value.length * .25)) { return InputType.Select; }
+
+            return InputType.Text;
+
+         });
+
+         const exampleValue = computed(() => {
             const values: FieldValueVm[] = [];
 
             for (const wi of workItems.value) {
@@ -123,16 +164,16 @@
             return values;
          });
 
+         const inputType = ref<InputType | null>(null);
+
          watch(inputSelection, selection => {
             if (selection === 'new') {
-               inputType.value = InputType.Text;
+               inputType.value = suggestedType.value;
                return;
             }
 
             inputType.value = null;
          });
-
-         const inputType = ref<InputType | null>(null);
 
          const isFormDirty = computed(() => {
             if (!originalInput.value && inputType.value) { return true; }
@@ -225,7 +266,7 @@
             emit('close');
          };
 
-         return { fieldValues, inputSelection, schemaInputs, inputType, save, cancel, isFormDirty, isFormValid };
+         return { exampleValue, inputSelection, schemaInputs, inputType, save, cancel, isFormDirty, isFormValid, suggestedType, selectValues };
       }
    });
 
@@ -236,3 +277,9 @@
    }
 
 </script>
+
+<style lang="postcss" scoped>
+   .select-list {
+      max-height: 300px;
+   }
+</style>
