@@ -17,9 +17,7 @@
          <div v-if="inputSelection === 'new'" class="form-floating mt-3">
             <select class="form-control" placeholder="*" v-model="inputType">
                <option :value="null"></option>
-               <option value="text">Text{{suggestedType === 'text' ? ' (Recommended}' : ''}}</option>
-               <option value="boolean" :disabled="selectValues.length > 2">Boolean{{suggestedType === 'boolean' ? ' (Recommended}' : ''}}{{selectValues.length > 2 ? ' (Too many possibilities)' : '' }}</option>
-               <option value="select" :disabled="selectValues.length > 50">Select{{suggestedType === 'select' ? ' (Recommended}' : ''}}{{selectValues.length > 50 ? ' (Too many possibilities)' : '' }}</option>
+               <option v-for="i of inputTypeVms" :key="i.type" :value="i.type" :disabled="i.disabled">{{i.text}}</option>
             </select>
             <label>Eonix Input</label>
          </div>
@@ -27,8 +25,8 @@
          <div class="mt-4" v-if="inputType === 'select'">
             <h3>Select values</h3>
             <div class="list-group select-list overflow-auto">
-               <div class="list-group-item" v-for="value of selectValues" :key="value">
-                  {{value}}
+               <div class="list-group-item" v-for="value of distinctValues" :key="value">
+                  {{value || '[Empty]'}}
                </div>
             </div>
          </div>
@@ -51,7 +49,7 @@
 
          <h3 class="mt-4">Example values</h3>
          <div class="list-group">
-            <div class="list-group-item" v-for="v of exampleValue" :key="v.id">
+            <div class="list-group-item" v-for="v of exampleValues" :key="v.id">
                <div class="row">
                   <a href="#" target="_blank" class="col-2 mb-0">{{v.itemType}} {{v.id}}</a>
                   <span class="col mb-0">{{v.value}}</span>
@@ -67,9 +65,9 @@
 
    import { AdoClient } from '@/services';
    import { useQueryRef } from '@/services/useQueryRef';
-   import { boardQuery, boardToBoardInput, deepClone, EonixClient, IInputBase, InputType, ISchema, isTextInput, ITextInput, ITextOptions, putBoardMutation, putSchemaMutation, schemaForBoardQuery, schemaToSchemaInput, TextType, uuid, UUID, uuidEmpty } from '@eonix-io/client';
-   import type { WorkItemField } from 'azure-devops-extension-api/WorkItemTracking';
-   import { computed, defineComponent, inject, ref, Ref, watch } from 'vue';
+   import { boardQuery, boardToBoardInput, deepClone, EonixClient, IInputBase, InputType, ISchema, ISelectInput, isTextInput, ITextInput, ITextOptions, putBoardMutation, putSchemaMutation, schemaForBoardQuery, schemaToSchemaInput, TextType, TextValueOptionsType, uuid, UUID, uuidEmpty } from '@eonix-io/client';
+   import type { WorkItem, WorkItemField } from 'azure-devops-extension-api/WorkItemTracking';
+   import { computed, defineComponent, inject, ref, Ref, toRef, watch } from 'vue';
    import { IInputAppData } from './IAppData';
 
    export default defineComponent({
@@ -108,61 +106,11 @@
 
          const workItems = computed(() => adoClient.value.getWorkItems(props.project).value);
 
-         const selectValues = computed(() => {
-            if (!workItems.value.length) { return null; }
-            const valueCount: any = {};
-            for (let i = 0; i < workItems.value.length; i++) {
-               const item = workItems.value[i];
-               const value = item.fields[props.field.referenceName];
-               if (!value) { continue; }
-               if (valueCount[value] === undefined) {
-                  valueCount[value] = 1;
-               } else {
-                  valueCount[value]++;
-               }
-            }
-            const keys = Object.getOwnPropertyNames(valueCount);
-            keys.sort((a, b) => a.localeCompare(b));
-            return keys;
-         });
+         const distinctValues = useDistinctValues(workItems, computed(() => props.field.referenceName));
 
-         const suggestedType = computed(() => {
+         const suggestedType = useSuggestedType(workItems, distinctValues);
 
-            if (!workItems.value) { return InputType.Text; }
-
-            const distinctValues = selectValues.value;
-            if (!distinctValues) { return InputType.Text; }
-
-            if (workItems.value.length > 50 && distinctValues.length < (workItems.value.length * .25)) { return InputType.Select; }
-
-            return InputType.Text;
-
-         });
-
-         const exampleValue = computed(() => {
-            const values: FieldValueVm[] = [];
-
-            for (const wi of workItems.value) {
-               let v = wi.fields[props.field.referenceName];
-               if (!v) { continue; }
-
-               if (props.field.isIdentity) {
-                  v = `${v.displayName} (${v.uniqueName})`;
-               }
-
-               if (values.some(x => x.value === v)) { continue; }
-
-               values.push({
-                  id: wi.id,
-                  value: v,
-                  itemType: wi.fields['System.WorkItemType']
-               });
-
-               if (values.length === 10) { break; }
-            }
-
-            return values;
-         });
+         const exampleValues = useExampleValues(workItems, toRef(props, 'field'));
 
          const inputType = ref<InputType | null>(null);
 
@@ -208,6 +156,9 @@
 
                let inputBase: IInputBase<IInputAppData> | null = null;
 
+               const id = originalInput.value?.id ?? uuid();
+               const name = originalInput.value?.name ?? props.field.name;
+
                switch (inputType.value!) {
                   case InputType.Text: {
 
@@ -218,11 +169,27 @@
 
                      inputBase = {
                         type: InputType.Text,
-                        id: originalInput.value?.id ?? uuid(),
-                        name: originalInput.value?.name ?? props.field.referenceName,
-                        appData: originalInput.value?.appData,
+                        id,
+                        name,
+                        appData: null,
                         options
                      } as ITextInput;
+
+                     break;
+                  }
+                  case InputType.Select: {
+
+                     inputBase = {
+                        type: InputType.Select,
+                        id,
+                        name,
+                        appData: null,
+                        options: {
+                           optionsType: TextValueOptionsType.Static,
+                           options: distinctValues.value?.map(v => ({ value: v, text: v })) ?? [],
+                           functionId: null
+                        }
+                     } as ISelectInput;
 
                      break;
                   }
@@ -266,14 +233,115 @@
             emit('close');
          };
 
-         return { exampleValue, inputSelection, schemaInputs, inputType, save, cancel, isFormDirty, isFormValid, suggestedType, selectValues };
+         const inputTypeVms = useInputTypes(suggestedType, distinctValues);
+
+         return { exampleValues, inputSelection, schemaInputs, inputType, save, cancel, isFormDirty, isFormValid, suggestedType, distinctValues, inputTypeVms };
       }
    });
+
+   function useDistinctValues(workItems: Ref<WorkItem[]>, referenceName: Ref<string>): Ref<string[] | null> {
+      return computed(() => {
+         if (!workItems.value.length) { return null; }
+         //Fasted distinct method based on https://medium.com/@jakubsynowiec/unique-array-values-in-javascript-7c932682766c
+         const seen = new Set();
+         const distinct: string[] = [];
+         for (let i = 0; i < workItems.value.length; i++) {
+            const value = workItems.value[i].fields[referenceName.value] ?? '';
+            if (!seen.has(value)) {
+               seen.add(value);
+               distinct.push(value);
+            }
+         }
+         return distinct.sort((a, b) => a.localeCompare(b));
+      });
+   }
+
+   function useSuggestedType(workItems: Ref<WorkItem[]>, distinctValues: Ref<string[] | null>) {
+      return computed(() => {
+
+         if (!workItems.value) { return InputType.Text; }
+
+         if (!distinctValues.value) { return InputType.Text; }
+
+         //If the number of distinct values is < 25% of the total values then suggest a select
+         if (workItems.value.length > 50 && distinctValues.value.length < 50 && distinctValues.value.length < (workItems.value.length * .25)) { return InputType.Select; }
+
+         return InputType.Text;
+
+      });
+   }
+
+   function useInputTypes(suggestedType: Ref<InputType>, distinctValues: Ref<string[] | null>): Ref<InputTypeVm[]> {
+      return computed(() => {
+         const vm = Object.entries(InputType).map(e => {
+
+            let text = e[0] + (e[1] === suggestedType.value ? ' (Recommended)' : '');
+            let disabled = false;
+
+            switch (e[1]) {
+               case InputType.Select: {
+                  if ((distinctValues.value?.length ?? 0) > 50) {
+                     disabled = true;
+                     text += ' (Too many possibilities)';
+                  }
+                  break;
+               }
+               case InputType.Boolean: {
+                  if ((distinctValues.value?.length ?? 0) > 2) {
+                     disabled = true;
+                     text += ' (Too many possibilities)';
+                  }
+                  break;
+               }
+            }
+
+            return {
+               type: e[1],
+               text,
+               disabled
+            };
+         });
+         return vm.sort((a, b) => a.type.localeCompare(b.type));
+      });
+   }
+
+   function useExampleValues(workItems: Ref<WorkItem[]>, workItemField: Ref<WorkItemField>): Ref<FieldValueVm[]> {
+      return computed(() => {
+         const values: FieldValueVm[] = [];
+
+         for (const wi of workItems.value) {
+            let v = wi.fields[workItemField.value.referenceName];
+            if (!v) { continue; }
+
+            if (workItemField.value.isIdentity) {
+               v = `${v.displayName} (${v.uniqueName})`;
+            }
+
+            if (values.some(x => x.value === v)) { continue; }
+
+            values.push({
+               id: wi.id,
+               value: v,
+               itemType: wi.fields['System.WorkItemType']
+            });
+
+            if (values.length === 10) { break; }
+         }
+
+         return values;
+      });
+   }
 
    interface FieldValueVm {
       id: number;
       value: string;
       itemType: string;
+   }
+
+   interface InputTypeVm {
+      type: InputType;
+      text: string;
+      disabled: boolean;
    }
 
 </script>
