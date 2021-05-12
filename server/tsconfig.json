@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "target": "ES2019", //Switching to 2020 causes webpack errors with ??
+        "module": "ES2020",
+        "moduleResolution": "node",
+        "allowSyntheticDefaultImports": true, //required for zen observables
+        "declaration": true,
+        "outDir": "./dist/esm",
+        "rootDir": "src",
+        "noEmitOnError": true,
+        "strict": true,
+        "noImplicitReturns": true,
+        "noPropertyAccessFromIndexSignature": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "removeComments": true,
+        "importHelpers": true
+    }
+}

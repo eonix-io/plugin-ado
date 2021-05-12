@@ -1,0 +1,36 @@
+{
+  "name": "@eonix-io/plugin-ado",
+  "description": "An Azure DevOps plugin for Eonix.Io",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eonix-io/plugin-ado"
+  },
+  "version": "0.0.1",
+  "author": {
+    "name": "Josh Kraker",
+    "email": "joshkrak@gmail.com"
+  },
+  "type": "commonjs",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "files": [
+    "dist/"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "clean": "rimraf ./dist/*",
+    "build": "npm run clean && tsc && tsc -p tsconfig-cjs.json",
+    "lint": "eslint ./src/**/*.ts"
+  },
+  "dependencies": {
+    "@eonix-io/client": "file:../../client"
+  },
+  "devDependencies": {
+    "@types/node": "^14.14.41",
+    "@typescript-eslint/eslint-plugin": "^4.22.0",
+    "@typescript-eslint/parser": "^4.22.0",
+    "eslint": "^7.24.0",
+    "rimraf": "^3.0.0",
+    "typescript": "^4.2.4"
+  }
+}
