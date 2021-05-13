@@ -40,6 +40,5 @@
       "**/.git/objects/**",
       ".vscode",
       "**/*.code-workspace"
-   ],
-   "editor.defaultFormatter": "octref.vetur"
+   ]
 }

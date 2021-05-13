@@ -14,7 +14,6 @@
    import { EonixClient } from '@eonix-io/client';
 
    export default defineComponent({
-      name: 'App',
       components: {
          Config
       },

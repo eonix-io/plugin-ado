@@ -2,13 +2,14 @@
 <template>
    <ex-modal @close="$emit('close')">
       <div v-if="field">
-
-         <h1>{{field.name}}</h1>
+         <h1>{{ field.name }}</h1>
 
          <div class="form-floating">
             <select class="form-control" placeholder="*" v-model="inputSelection">
                <option value="ignore">Ignore</option>
-               <option v-for="i of schemaInputs" :key="i.id" :value="i.id">{{i.name}}</option>
+               <option v-for="i of schemaInputs" :key="i.id" :value="i.id">
+                  {{ i.name }}
+               </option>
                <option value="new">New</option>
             </select>
             <label>Eonix Input</label>
@@ -16,17 +17,24 @@
 
          <div v-if="inputSelection === 'new'" class="form-floating mt-3">
             <select class="form-control" placeholder="*" v-model="inputType">
-               <option :value="null"></option>
-               <option v-for="i of inputTypeVms" :key="i.type" :value="i.type" :disabled="i.disabled">{{i.text}}</option>
+               <option :value="null" />
+               <option
+                  v-for="i of inputTypeVms"
+                  :key="i.type"
+                  :value="i.type"
+                  :disabled="i.disabled"
+               >
+                  {{ i.text }}
+               </option>
             </select>
             <label>Eonix Input</label>
          </div>
 
          <div class="mt-4" v-if="inputType === 'select'">
             <h3>Select values</h3>
-            <div class="list-group select-list overflow-auto">
+            <div class="list-group select-list overflow-auto" v-if="distinctValues">
                <div class="list-group-item" v-for="value of distinctValues" :key="value">
-                  {{value || '[Empty]'}}
+                  {{ value || "[Empty]" }}
                </div>
             </div>
          </div>
@@ -34,29 +42,33 @@
          <div class="row mt-5" v-if="isFormDirty">
             <div class="col">
                <button
-                       id='p-task-save'
-                       class="w-100 btn btn-primary"
-                       :class="{ 'btn-outline-secondary': !isFormDirty }"
-                       :disabled="!isFormValid || !isFormDirty"
-                       @click="save">Save</button>
+                  id="p-task-save"
+                  class="w-100 btn btn-primary"
+                  :class="{ 'btn-outline-secondary': !isFormDirty }"
+                  :disabled="!isFormValid || !isFormDirty"
+                  @click="save"
+               >
+                  Save
+               </button>
             </div>
             <div class="col">
-               <button
-                       class="w-100 btn btn-secondary"
-                       @click="cancel">{{isFormDirty ? 'Cancel' : 'Close' }}</button>
+               <button class="w-100 btn btn-secondary" @click="cancel">
+                  {{ isFormDirty ? "Cancel" : "Close" }}
+               </button>
             </div>
          </div>
 
-         <h3 class="mt-4">Example values</h3>
+         <h3 class="mt-4">
+            Example values
+         </h3>
          <div class="list-group">
             <div class="list-group-item" v-for="v of exampleValues" :key="v.id">
                <div class="row">
-                  <a href="#" target="_blank" class="col-2 mb-0">{{v.itemType}} {{v.id}}</a>
-                  <span class="col mb-0">{{v.value}}</span>
+                  <a href="#" target="_blank" class="col-2 mb-0"> {{ v.itemType }} {{ v.id }} </a>
+                  <span class="col mb-0">{{ v.value }}</span>
                </div>
             </div>
          </div>
-
       </div>
    </ex-modal>
 </template>
@@ -271,7 +283,7 @@
       });
    }
 
-   function useInputTypes(suggestedType: Ref<InputType>, distinctValues: Ref<string[] | null>): Ref<InputTypeVm[]> {
+   function useInputTypes(suggestedType: Ref<InputType>, distinctValues: Ref<string[] | null>): Ref<IInputTypeVm[]> {
       return computed(() => {
          const vm = Object.entries(InputType).map(e => {
 
@@ -305,9 +317,9 @@
       });
    }
 
-   function useExampleValues(workItems: Ref<WorkItem[]>, workItemField: Ref<WorkItemField>): Ref<FieldValueVm[]> {
+   function useExampleValues(workItems: Ref<WorkItem[]>, workItemField: Ref<WorkItemField>): Ref<IFieldValueVm[]> {
       return computed(() => {
-         const values: FieldValueVm[] = [];
+         const values: IFieldValueVm[] = [];
 
          for (const wi of workItems.value) {
             let v = wi.fields[workItemField.value.referenceName];
@@ -332,13 +344,13 @@
       });
    }
 
-   interface FieldValueVm {
+   interface IFieldValueVm {
       id: number;
       value: string;
       itemType: string;
    }
 
-   interface InputTypeVm {
+   interface IInputTypeVm {
       type: InputType;
       text: string;
       disabled: boolean;

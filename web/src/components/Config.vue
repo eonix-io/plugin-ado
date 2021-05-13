@@ -7,58 +7,80 @@
             <div class="form-floating">
                <select class="form-select" id="projectSelect" v-model="project">
                   <option :value="null">Select project</option>
-                  <option v-for="p of teamProjects" :key="p.id" :value="p">{{p.name}}</option>
+                  <option v-for="p of teamProjects" :key="p.id" :value="p">
+                     {{ p.name }}
+                  </option>
                </select>
                <label for="projectSelect">Project</label>
             </div>
          </div>
       </div>
       <div class="row" v-if="project && !workItemTypes">
-         <div class="col">
-            Loading work item types for {{project.name}}
-         </div>
+         <div class="col">Loading work item types for {{ project.name }}</div>
       </div>
       <div class="row" v-if="workItemTypes">
          <div class="col item-types">
             <div class="form-check form-check-inline" v-for="it of workItemTypes" :key="it.name">
-               <input class="" type="checkbox" :id="getWorkItemTypeId(it)" :checked="selectedWorkItemTypes.includes(it)" @change="toggleWorkItemSelection(it)">
+               <input
+                  class=""
+                  type="checkbox"
+                  :id="getWorkItemTypeId(it)"
+                  :checked="selectedWorkItemTypes.includes(it)"
+                  @change="toggleWorkItemSelection(it)"
+               />
                <label class="ms-2" :for="getWorkItemTypeId(it)">
-                  <img :src="it.icon.url">
-                  <span class="ms-2">{{it.name}}</span>
+                  <img :src="it.icon.url" />
+                  <span class="ms-2">{{ it.name }}</span>
                </label>
             </div>
          </div>
       </div>
       <div class="row mappings" v-if="mappings && filteredMappings">
          <div class="col">
-
             <h3 class="d-inline-block mb-2">ADO Fields</h3>
             <div class="d-inline-block ms-3">
-               <input type="checkbox" v-model="mappingFilters.hasValue" for="hideValuelessFilter">
-               <label for="hideValuelessFilter">Hide fields with no values</label>
+               <input type="checkbox" v-model="mappingFilters.hasValue" for="hideValuelessFilter" />
+               <label for="hideValuelessFilter">
+                  Hide fields with no values
+               </label>
             </div>
 
             <div class="list-group list-group-flush">
-               <div role="button" class="list-group-item list-group-item-action" v-for="m of filteredMappings" :key="m.mapping.referenceName" @click="selectedReferenceName = m.mapping.referenceName">
+               <div
+                  role="button"
+                  class="list-group-item list-group-item-action"
+                  v-for="m of filteredMappings"
+                  :key="m.mapping.referenceName"
+                  @click="selectedReferenceName = m.mapping.referenceName"
+               >
                   <div class="row">
                      <div class="col">
                         <div>
-                           <span :class="{'fw-bold': m.mapping.hasValues}">{{m.mapping.referenceName}}</span>
+                           <span :class="{ 'fw-bold': m.mapping.hasValues }">{{
+                              m.mapping.referenceName
+                           }}</span>
                         </div>
-                        <div>{{m.mapping.helpText}}</div>
+                        <div>{{ m.mapping.helpText }}</div>
                      </div>
                      <div class="col-auto">
-                        <span v-if="m.eonixInputName" class="badge bg-primary p-2">{{m.eonixInputName}}</span>
+                        <span v-if="m.eonixInputName" class="badge bg-primary p-2">{{
+                           m.eonixInputName
+                        }}</span>
                         <span v-else class="text-muted">Ignored</span>
                      </div>
                   </div>
                </div>
             </div>
-
          </div>
       </div>
 
-      <field-modal v-if="selectedField" :boardId="boardId" :field="selectedField" :project="project.name" @close="selectedReferenceName=null"></field-modal>
+      <field-modal
+         v-if="selectedField"
+         :boardId="boardId"
+         :field="selectedField"
+         :project="project.name"
+         @close="selectedReferenceName = null"
+      ></field-modal>
    </div>
 </template>
 

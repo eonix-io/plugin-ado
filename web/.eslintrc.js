@@ -7,7 +7,7 @@ module.exports = {
       'eslint:recommended',
       'plugin:@typescript-eslint/eslint-recommended',
       'plugin:@typescript-eslint/recommended',
-      'plugin:vue/essential'
+      'plugin:vue/vue3-strongly-recommended'
    ],
    'globals': {
       'Atomics': 'readonly',
@@ -28,12 +28,55 @@ module.exports = {
 
    'rules': {
 
+      'vue/require-default-prop': [
+         'off'
+      ],
+
+      'vue/html-self-closing': [
+         'off'
+      ],
+
+      'vue/max-attributes-per-line': [
+         'off'
+      ],
+
+      'vue/html-indent': [
+         //Turned off because I like 3, not 2
+         'off'
+      ],
+
+      'vue/attribute-hyphenation': [
+         //Typing hyphens is annoying
+         'off'
+      ],
+
       'vue/no-multiple-template-root': [
          'off'
       ],
 
       'vue/no-v-model-argument': [
          'off'
+      ],
+
+      'vue/singleline-html-element-content-newline': [
+         'off'
+      ],
+
+      'vue/component-definition-name-casing': [
+         'error',
+         'kebab-case'
+      ],
+
+      '@typescript-eslint/naming-convention': [
+         'error',
+         {
+            'selector': 'interface',
+            'format': ['PascalCase'],
+            'custom': {
+               'regex': '^I[A-Z]',
+               'match': true
+            }
+         }
       ],
 
       '@typescript-eslint/explicit-module-boundary-types': [
