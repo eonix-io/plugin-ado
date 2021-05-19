@@ -1,11 +1,11 @@
 {
     "compilerOptions": {
         "target": "ES2019", //Switching to 2020 causes webpack errors with ??
-        "module": "ES2020",
+        "module": "commonjs",
         "moduleResolution": "node",
         "allowSyntheticDefaultImports": true, //required for zen observables
         "declaration": true,
-        "outDir": "./dist/esm",
+        "outDir": "./dist",
         "rootDir": "src",
         "noEmitOnError": true,
         "strict": true,

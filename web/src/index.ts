@@ -4,7 +4,7 @@ import type { IInstallOptions } from '@eonix-io/client';
 import AdoConfig from './components/Config.vue';
 
 function install(Vue: App, opt: IInstallOptions) {
-   Vue.component(`${opt.componentPrefix}config`, AdoConfig);
+   Vue.component(`${opt.componentPrefix}config`, AdoConfig as any);
 }
 
 export default { install };

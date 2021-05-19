@@ -75,11 +75,11 @@
       </div>
 
       <field-modal
-         v-if="selectedField"
+         v-if="selectedField && project"
          :boardId="boardId"
          :field="selectedField"
          :project="project.name"
-         @close="selectedReferenceName = null"
+         @close="closeModal"
       ></field-modal>
    </div>
 </template>
@@ -202,7 +202,11 @@
          const selectedReferenceName = ref<string | null>(null);
          const selectedField = computed(() => fields.value?.find(f => f.referenceName === selectedReferenceName.value) ?? null);
 
-         return { teamProjects, onConnect, project, workItemTypes, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, filteredMappings, mappingFilters, selectedReferenceName, selectedField };
+         const closeModal = () => {
+            selectedReferenceName.value = null;
+         };
+
+         return { teamProjects, onConnect, project, workItemTypes, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, filteredMappings, mappingFilters, selectedReferenceName, selectedField, closeModal };
 
          // const client = inject<EonixClient>(EONIX_CLIENT_INJECTION_KEY)!;
          // const boardQ = boardQuery(props.boardId);
