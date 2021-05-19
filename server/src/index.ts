@@ -2,7 +2,8 @@
 //Needed to polyfill fetch for apollo client to use
 import 'cross-fetch/polyfill';
 
-import { boardQuery, EonixClient, UUID } from '@eonix-io/client';
+import { boardQuery, EonixClient, schemaForBoardQuery, UUID } from '@eonix-io/client';
+import { toPromise } from './services/toPromise';
 
 const eonixToken = process.env['EONIX_TOKEN'];
 if (!eonixToken) { throw new Error('Missing EONIX_TOKEN config'); }
@@ -15,8 +16,14 @@ if (!eonixBoardId) { throw new Error('Missing EONIX_BOARD_ID config'); }
 
 const eonixClient = new EonixClient(() => eonixToken, { host: eonixHost });
 
-const board$ = eonixClient.watchQuery(boardQuery(eonixBoardId));
+(async () => {
 
-board$.subscribe(b => {
-   console.log('Board', b);
-});
+   console.log('Loading eonix board and schema');
+   const board = (await toPromise(eonixClient.watchQuery(boardQuery(eonixBoardId)))).board;
+   const schema = (await toPromise(eonixClient.watchQuery(schemaForBoardQuery(eonixBoardId)))).schemaForBoard;
+
+   console.log('Board', JSON.stringify(board, null, 3));
+   console.log('Schema', JSON.stringify(schema, null, 3));
+
+   process.exit();
+})();
