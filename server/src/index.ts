@@ -1,7 +1,4 @@
-
-//Needed to polyfill fetch for apollo client to use
 import 'cross-fetch/polyfill';
-
 import { boardQuery, IBoard, ISchema, ITask, ITaskInput, putTasksMutation, schemaForBoardQuery, tasksForBoardQuery, UUID } from '@eonix-io/client';
 import { IBoardAppData, IInputAppData, ITaskAppData } from '../../common/IAppData';
 import * as AzureDevOps from 'azure-devops-node-api';
@@ -17,7 +14,6 @@ const eonixBoardId = process.env['EONIX_BOARD_ID'] as UUID | undefined;
 if (!eonixBoardId) { throw new Error('Missing EONIX_BOARD_ID config'); }
 
 (async () => {
-
    console.log('Loading eonix board, schema and tasks');
    const [board, schema, tasks] = await Promise.all([
       eonixClient.watchQuery(boardQuery<IBoardAppData>(eonixBoardId)).asPromise(),
@@ -53,7 +49,12 @@ if (!eonixBoardId) { throw new Error('Missing EONIX_BOARD_ID config'); }
    let processedWorkItems = 0;
    const taskUpdates: ITaskInput[] = [];
    await loadWorkItems(witClient, boardAdoPlugin.project, allIds, fields, async wis => {
-      const updates = wis.map(wi => getWorkItemTaskUpdate(eonixBoardId, mappedInputs, mappedTasks, wi)).filter(u => u) as ITaskInput[];
+      const updates: ITaskInput[] = [];
+      for (const wi of wis) {
+         const update = await getWorkItemTaskUpdate(boardAdoPlugin.token, eonixClient, eonixBoardId, mappedInputs, mappedTasks, wi);
+         if (!update) { return; }
+         updates.push(update);
+      }
       taskUpdates.push(...updates);
       processedWorkItems += wis.length;
       console.log(`Processed ${processedWorkItems} work items resulting in ${taskUpdates.length} tasks to be updated `);

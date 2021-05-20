@@ -22,9 +22,11 @@ export async function loadWorkItems(client: WorkItemTrackingApi, project: string
    let request = getWorkItemRequest();
    let lastCallbackResult: void | Promise<void> | undefined;
    while (request) {
-      await Promise.resolve(lastCallbackResult);
+      //await Promise.resolve(lastCallbackResult);
       const batchItems = await client.getWorkItemsBatch(request, project);
       lastCallbackResult = batchCallback(batchItems);
+      //This await shouldn't be here. I wanted to let this loop and start loading the next set while the currnet processes but the app just closes with no error when we try and call a fetch to download a task image.
+      await Promise.resolve(lastCallbackResult);
       batchNum++;
       request = getWorkItemRequest();
    }
