@@ -2,8 +2,9 @@
 //Needed to polyfill fetch for apollo client to use
 import 'cross-fetch/polyfill';
 
-import { boardQuery, EonixClient, schemaForBoardQuery, UUID } from '@eonix-io/client';
-import { toPromise } from './services/toPromise';
+import { boardQuery, EonixClient, UUID } from '@eonix-io/client';
+import { IBoardAppData } from './IAppData';
+import * as AzureDevOps from 'azure-devops-node-api';
 
 const eonixToken = process.env['EONIX_TOKEN'];
 if (!eonixToken) { throw new Error('Missing EONIX_TOKEN config'); }
@@ -19,11 +20,20 @@ const eonixClient = new EonixClient(() => eonixToken, { host: eonixHost });
 (async () => {
 
    console.log('Loading eonix board and schema');
-   const board = (await toPromise(eonixClient.watchQuery(boardQuery(eonixBoardId)))).board;
-   const schema = (await toPromise(eonixClient.watchQuery(schemaForBoardQuery(eonixBoardId)))).schemaForBoard;
+   const board = (await eonixClient.watchQuery(boardQuery<IBoardAppData>(eonixBoardId)).asPromise()).board;
 
-   console.log('Board', JSON.stringify(board, null, 3));
-   console.log('Schema', JSON.stringify(schema, null, 3));
+   const boardAdoPlugin = board?.appData?.pluginAdo;
+   if (!boardAdoPlugin) { throw new Error('Missing board.appData.adoPlugin'); }
+
+   const adoAuthHandler = AzureDevOps.getPersonalAccessTokenHandler(boardAdoPlugin.token);
+   const adoConnection = new AzureDevOps.WebApi(boardAdoPlugin.orgUrl, adoAuthHandler);
+   const witClient = await adoConnection.getWorkItemTrackingApi();
+
+   const wiqlResult = await witClient.queryByWiql({ query: 'Select [Id] From WorkItems order by [System.CreatedDate] desc' }, { projectId: boardAdoPlugin.project });
+
+   const allIds = wiqlResult.workItems?.map(wi => wi.id);
+
+   console.log('Got work item ids', allIds?.length);
 
    process.exit();
 })();

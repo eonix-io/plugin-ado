@@ -5,7 +5,7 @@ import { reactive, ref, Ref } from 'vue';
 
 export class AdoClient {
 
-   private constructor(private readonly _restOptions: IVssRestClientOptions, private _projects: Promise<TeamProjectReference[]>) { }
+   private constructor(private readonly _restOptions: IVssRestClientOptions, private _projects: Promise<TeamProjectReference[]>, public readonly token: string) { }
 
    public static async connect(projectUrl: string, token: string): Promise<AdoClient> {
       const options: IVssRestClientOptions = {
@@ -21,8 +21,10 @@ export class AdoClient {
       const coreClient = new CoreRestClient(options);
       const projects = await coreClient.getProjects();
 
-      return new AdoClient(options, Promise.resolve(projects));
+      return new AdoClient(options, Promise.resolve(projects), token);
    }
+
+   public get projectUrl() { return this._restOptions.rootPath as string; }
 
    public getProjects(): Promise<TeamProjectReference[]> {
       if (this._projects) { return this._projects; }

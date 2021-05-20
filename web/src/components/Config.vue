@@ -35,6 +35,7 @@
             </div>
          </div>
       </div>
+
       <div class="row mappings" v-if="mappings && filteredMappings">
          <div class="col">
             <h3 class="d-inline-block mb-2">ADO Fields</h3>
@@ -74,6 +75,12 @@
          </div>
       </div>
 
+      <div class="row" v-if="mappings && filteredMappings">
+         <div class="col">
+            <button class="btn btn-primary" @click="save">Save Setup</button>
+         </div>
+      </div>
+
       <field-modal
          v-if="selectedField && project"
          :boardId="boardId"
@@ -93,8 +100,8 @@
    import FieldModal from './FieldModal.vue';
    import { AdoClient } from '@/services';
    import ConnectionInfo from './ConnectionInfo.vue';
-   import { EonixClient, IInputBase, schemaForBoardQuery, UUID } from '@eonix-io/client';
-   import { IInputAppData } from './IAppData';
+   import { boardQuery, boardToBoardInput, EonixClient, IInputBase, putBoardMutation, schemaForBoardQuery, UUID } from '@eonix-io/client';
+   import { IBoardAppData, IInputAppData } from './IAppData';
    import { useQueryRef } from '@/services/useQueryRef';
 
    export default defineComponent({
@@ -171,6 +178,7 @@
 
          const schemaQuery = schemaForBoardQuery<any, IInputAppData>(props.boardId);
          const schema = useQueryRef(eonixClient.watchQuery(schemaQuery), null);
+         const board = useQueryRef(eonixClient.watchQuery(boardQuery<IBoardAppData>(props.boardId)), null);
 
          const schemaInputsByFieldReferenceName = computed<Map<string, IInputBase<IInputAppData>> | null>(() => {
             const mappedInputs = schema.value?.schemaForBoard?.inputs.filter(i => i.appData?.pluginAdo?.referenceName);
@@ -206,7 +214,26 @@
             selectedReferenceName.value = null;
          };
 
-         return { teamProjects, onConnect, project, workItemTypes, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, filteredMappings, mappingFilters, selectedReferenceName, selectedField, closeModal };
+         const save = async () => {
+            if (!board.value?.board) { return; }
+            if (!adoClient.value) { return; }
+            if (!project.value) { return; }
+
+            const newBoard = boardToBoardInput(board.value.board);
+            newBoard.appData = {
+               ...newBoard.appData,
+               pluginAdo: {
+                  orgUrl: adoClient.value.projectUrl,
+                  token: adoClient.value.token,
+                  project: project.value.id,
+                  taskTypes: selectedWorkItemTypes.value.map(wit => wit.name)
+               }
+            };
+
+            await putBoardMutation(eonixClient, props.boardId, newBoard);
+         };
+
+         return { teamProjects, onConnect, project, workItemTypes, getWorkItemTypeId, selectedWorkItemTypes, toggleWorkItemSelection, mappings, filteredMappings, mappingFilters, selectedReferenceName, selectedField, closeModal, save };
 
          // const client = inject<EonixClient>(EONIX_CLIENT_INJECTION_KEY)!;
          // const boardQ = boardQuery(props.boardId);

@@ -44,5 +44,5 @@
 		],
 		"editor.tabSize": 3,
 		"html.format.wrapAttributes": "aligned-multiple"
-}
+	}
 }

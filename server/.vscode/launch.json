@@ -12,8 +12,9 @@
             "<node_internals>/**",
             "'!**/node_modules/**"
          ],
-         "program": "${workspaceFolder}/dist/index.js",
+         "program": "${workspaceFolder}/src/index.ts",
          "runtimeArgs": [
+            "--trace-warnings",
             "--unhandled-rejections=strict",
             "--require=dotenv/config"
          ],
