@@ -19,7 +19,7 @@
   "license": "MIT",
   "scripts": {
     "clean": "rimraf ./dist/*",
-    "build": "npm run clean && tsc && tsc -p tsconfig-cjs.json",
+    "build": "npm run clean && tsc",
     "lint": "eslint ./src/**/*.ts"
   },
   "dependencies": {

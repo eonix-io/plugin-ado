@@ -80,7 +80,7 @@
    import { boardQuery, boardToBoardInput, deepClone, EonixClient, IInputBase, InputType, ISchema, ISelectInput, isTextInput, ITextInput, ITextOptions, putBoardMutation, putSchemaMutation, schemaForBoardQuery, schemaToSchemaInput, TextType, TextValueOptionsType, uuid, UUID, uuidEmpty } from '@eonix-io/client';
    import type { WorkItem, WorkItemField } from 'azure-devops-extension-api/WorkItemTracking';
    import { computed, defineComponent, inject, ref, Ref, toRef, watch } from 'vue';
-   import { IInputAppData } from './IAppData';
+   import { IInputAppData } from '@common/IAppData';
 
    export default defineComponent({
       props: {

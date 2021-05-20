@@ -6,7 +6,10 @@
         "allowSyntheticDefaultImports": true, //required for zen observables
         "declaration": true,
         "outDir": "./dist",
-        "rootDir": "src",
+        "rootDirs": [
+            "src",
+            "../common"
+        ],
         "noEmitOnError": true,
         "strict": true,
         "noImplicitReturns": true,

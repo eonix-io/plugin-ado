@@ -101,7 +101,7 @@
    import { AdoClient } from '@/services';
    import ConnectionInfo from './ConnectionInfo.vue';
    import { boardQuery, boardToBoardInput, EonixClient, IInputBase, putBoardMutation, schemaForBoardQuery, UUID } from '@eonix-io/client';
-   import { IBoardAppData, IInputAppData } from './IAppData';
+   import { IBoardAppData, IInputAppData } from '@common/IAppData';
    import { useQueryRef } from '@/services/useQueryRef';
 
    export default defineComponent({

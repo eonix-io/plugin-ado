@@ -1,5 +1,5 @@
 import { IInputBase } from '@eonix-io/client';
-import { IInputAppData } from './IAppData';
+import { IInputAppData } from '../../common/IAppData';
 
 export interface IInputMapping {
    [key: string]: IInputBase<IInputAppData>;

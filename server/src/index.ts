@@ -3,7 +3,7 @@
 import 'cross-fetch/polyfill';
 
 import { boardQuery, IBoard, ISchema, ITask, schemaForBoardQuery, tasksForBoardQuery, UUID } from '@eonix-io/client';
-import { IBoardAppData, IInputAppData, ITaskAppData } from './IAppData';
+import { IBoardAppData, IInputAppData } from '../../common/IAppData';
 import * as AzureDevOps from 'azure-devops-node-api';
 import { loadWorkItems } from './services/loadWorkItems';
 import { createEonixClient } from './services/createEonixClient';
