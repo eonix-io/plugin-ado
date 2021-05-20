@@ -1,12 +1,9 @@
 import 'cross-fetch/polyfill';
-import { boardQuery, IBoard, ISchema, ITask, ITaskInput, putTasksMutation, schemaForBoardQuery, tasksForBoardQuery, UUID } from '@eonix-io/client';
+import { boardQuery, IBoard, ISchema, ITask, schemaForBoardQuery, tasksForBoardQuery, UUID } from '@eonix-io/client';
 import { IBoardAppData, IInputAppData, ITaskAppData } from '../../common/IAppData';
-import * as AzureDevOps from 'azure-devops-node-api';
 import { loadWorkItems } from './services/loadWorkItems';
 import { createEonixClient } from './services/createEonixClient';
-import { IInputMapping } from './IInputMapping';
-import { getWorkItemTaskUpdate } from './services/getWorkItemTaskUpdate';
-import { ITaskMapping } from './ITaskMapping';
+import { TaskProcessor } from './services/TaskProcessor';
 
 const eonixClient = createEonixClient();
 
@@ -23,48 +20,24 @@ if (!eonixBoardId) { throw new Error('Missing EONIX_BOARD_ID config'); }
       return [results[0].board, results[1].schemaForBoard, results[2].tasksForBoard] as [IBoard<IBoardAppData>, ISchema<any, IInputAppData>, ITask<ITaskAppData>[]];
    });
 
-   const mappedInputs: IInputMapping = Object.fromEntries(schema.inputs.filter(i => i.appData?.pluginAdo?.referenceName).map(i => {
-      return [i.appData!.pluginAdo!.referenceName, i];
-   }));
-
-   const mappedTasks: ITaskMapping = Object.fromEntries(tasks.filter(t => t.appData?.pluginAdo?.workItemId).map(t => [t.appData!.pluginAdo!.workItemId, t]));
-
    const boardAdoPlugin = board?.appData?.pluginAdo;
    if (!boardAdoPlugin) { throw new Error('Missing board.appData.adoPlugin'); }
 
-   console.log('Creatinging work item ADO client');
-   const adoAuthHandler = AzureDevOps.getPersonalAccessTokenHandler(boardAdoPlugin.token);
-   const adoConnection = new AzureDevOps.WebApi(boardAdoPlugin.orgUrl, adoAuthHandler);
-   const witClient = await adoConnection.getWorkItemTrackingApi();
-
-   console.log('Getting work item ids');
-   const wiqlResult = await witClient.queryByWiql({ query: 'Select [Id] From WorkItems order by [System.CreatedDate] desc' }, { projectId: boardAdoPlugin.project });
-
-   let allIds = wiqlResult.workItems?.map(wi => wi.id!) ?? [];
-   allIds = allIds.slice(0, 2);
-   console.log('Got work item ids', allIds?.length);
+   const taskProcessor = new TaskProcessor(eonixClient, eonixBoardId, boardAdoPlugin.token, schema, tasks);
 
    console.log('Starting work item loader');
-   const fields = Object.getOwnPropertyNames(mappedInputs);
+   const fields = schema.inputs.map(i => i.appData?.pluginAdo?.referenceName).filter(n => n) as string[];
    let processedWorkItems = 0;
-   const taskUpdates: ITaskInput[] = [];
-   await loadWorkItems(witClient, boardAdoPlugin.project, allIds, fields, async wis => {
-      const updates: ITaskInput[] = [];
-      for (const wi of wis) {
-         const update = await getWorkItemTaskUpdate(boardAdoPlugin.token, eonixClient, eonixBoardId, mappedInputs, mappedTasks, wi);
-         if (!update) { return; }
-         updates.push(update);
-      }
-      taskUpdates.push(...updates);
+   await loadWorkItems(boardAdoPlugin, fields, async wis => {
       processedWorkItems += wis.length;
-      console.log(`Processed ${processedWorkItems} work items resulting in ${taskUpdates.length} tasks to be updated `);
+      console.log(`Received batch of ${wis.length} work item. Total ${processedWorkItems + wis.length}`);
+      taskProcessor.QueueWorkItems(wis);
    });
 
-   while (taskUpdates.length) {
-      const batch = taskUpdates.splice(0, 50);
-      console.log(`Writing batch of ${batch.length} tasks. ${taskUpdates.length} remaining`);
-      await putTasksMutation(eonixClient, batch);
-   }
+   console.log('Work Item loading done. Waiting for update queue to flush');
+   const tasksUpdate = await taskProcessor.flushQueue();
+
+   console.log(`Sync finished. Updated ${tasksUpdate} tasks.`);
 
    process.exit();
 })();
