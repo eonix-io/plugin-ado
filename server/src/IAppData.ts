@@ -14,3 +14,9 @@ export interface IBoardAppData {
       taskTypes: string[];
    } | null;
 }
+
+export interface ITaskAppData {
+   pluginAdo?: {
+      workItemId: number;
+   };
+}
