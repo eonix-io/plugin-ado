@@ -2,7 +2,7 @@ import { WorkItem, WorkItemBatchGetRequest, WorkItemExpand } from 'azure-devops-
 import { WorkItemTrackingApi } from 'azure-devops-node-api/WorkItemTrackingApi';
 
 /** Loads all requested ids in batches of 200 at a time. Invokes callback with each batch. Returns a promise that resolves when all batches have been loaded */
-export async function loadWorkItems(client: WorkItemTrackingApi, project: string, idsToLoad: number[], batchCallback: (workItems: WorkItem[]) => void | Promise<void>): Promise<void> {
+export async function loadWorkItems(client: WorkItemTrackingApi, project: string, idsToLoad: number[], fields: string[], batchCallback: (workItems: WorkItem[]) => void | Promise<void>): Promise<void> {
 
    let batchNum = 0;
 
@@ -14,7 +14,8 @@ export async function loadWorkItems(client: WorkItemTrackingApi, project: string
       const ids = idsToLoad.slice(start, end);
       return {
          ids,
-         $expand: WorkItemExpand.Relations
+         fields,
+         //$expand: WorkItemExpand.Relations
       } as WorkItemBatchGetRequest;
    };
 
