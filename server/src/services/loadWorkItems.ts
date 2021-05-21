@@ -14,7 +14,7 @@ export async function loadWorkItems(adoPluginConfig: NonNullable<IBoardAppData['
    const wiqlResult = await witClient.queryByWiql({ query: 'Select [Id] From WorkItems order by [System.CreatedDate] desc' }, { projectId: adoPluginConfig.project });
 
    const allIds = wiqlResult.workItems?.map(wi => wi.id!) ?? [];
-   //allIds = allIds.slice(0, 200);
+   //allIds = allIds.slice(0, 100);
    console.log('Got work item ids', allIds?.length);
 
    let batchNum = 0;

@@ -18,5 +18,7 @@ export interface IBoardAppData {
 export interface ITaskAppData {
    pluginAdo?: {
       workItemId: number;
+      /** Key=referenceName, Value=Hash of the field's original value  */
+      valueHash: Record<string, string>
    };
 }

@@ -1,13 +1,14 @@
-import { deepEquals, EonixClient, InputType, IScalarValue, ISchema, ITask, ITaskInput, putTasksMutation, taskToTaskInput, uuid, UUID, ValueType } from '@eonix-io/client';
+import { deepEquals, EonixClient, InputType, IScalarValue, ISchema, isScalarValue, ITask, ITaskInput, putTasksMutation, taskToTaskInput, uuid, UUID, ValueType } from '@eonix-io/client';
 import { WorkItem } from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
 import { ITaskAppData } from '../IAppData';
 import { IInputMapping } from '../IInputMapping';
 import { ITaskMapping } from '../ITaskMapping';
 import { fetch } from 'cross-fetch';
+import { createHash } from 'crypto';
 
 export class TaskProcessor {
 
-   private _mappedTasks: ITaskMapping;
+   private _mappedTasks: ITaskMapping<ITaskAppData>;
    private _mappedInputs: IInputMapping;
 
    public constructor(
@@ -15,7 +16,7 @@ export class TaskProcessor {
       private readonly _boardId: UUID,
       private readonly _adoToken: string,
       readonly schema: ISchema,
-      readonly existingTasks: ITask[]
+      readonly existingTasks: ITask<ITaskAppData>[]
    ) {
 
       this._mappedTasks = Object.fromEntries(existingTasks.filter(t => t.appData?.pluginAdo?.workItemId).map(t => [t.appData!.pluginAdo!.workItemId, t]));
@@ -118,8 +119,10 @@ export class TaskProcessor {
          scalarValues: [],
          taskReferenceValues: [],
          appData: {
+            ...existingTask?.appData ?? {},
             pluginAdo: {
-               workItemId: workItem.id
+               workItemId: workItem.id,
+               valueHash: {}
             }
          }
       };
@@ -128,29 +131,43 @@ export class TaskProcessor {
          let value: string = workItem.fields[referenceName]?.toString();
          if (!value) { continue; }
 
+         const valueHash = createHash('md5').update(value).digest('hex');
+         newTask.appData!.pluginAdo!.valueHash[referenceName] = valueHash;
+
          const input = this._mappedInputs[referenceName];
 
-         const azImgMatches = [...value.matchAll(/<img src="(https:\/\/dev.azure.com\/.+?)\?fileName=(.+?)"/gi)];
-         if (azImgMatches.length) { console.log(`Uploading ${azImgMatches.length} images for work item ${workItem.id} - ${referenceName}`); }
-         const uploadProms = azImgMatches.map(async m => {
-            const fileName = m[2];
-            const adoImgUrl = `${m[1]}?fileName=${fileName}`;
-
-            const authHeader = 'Basic ' + Buffer.from(`:${this._adoToken}`).toString('base64');
-
-            const img = await fetch(adoImgUrl, { headers: { 'Authorization': authHeader } }).then(r => r.arrayBuffer());
-
-            const eoImgUrl = await this._eonixClient.uploadMarkdownFile(newTask.id, input.id, fileName, Buffer.from(img));
-
-            value = value.replace(adoImgUrl, eoImgUrl);
-
-         });
-
-         await Promise.all(uploadProms);
-
-         if (azImgMatches.length) { console.log(`Image upload for work item ${workItem.id} - ${referenceName} complete`); }
-
          const existingTaskValue = existingTask?.values.find(v => v.inputId === input.id);
+
+         if (
+            existingTaskValue
+            && valueHash === existingTask.appData?.pluginAdo?.valueHash[referenceName]
+            && isScalarValue(existingTaskValue)
+            && existingTaskValue.value.value
+         ) {
+            value = existingTaskValue.value.value;
+         } else {
+
+            const azImgMatches = [...value.matchAll(/<img src="(https:\/\/dev.azure.com\/.+?)\?fileName=(.+?)"/gi)];
+            if (azImgMatches.length) { console.debug(`Uploading ${azImgMatches.length} images for work item ${workItem.id} - ${referenceName}`); }
+            const uploadProms = azImgMatches.map(async m => {
+               const fileName = m[2];
+               const adoImgUrl = `${m[1]}?fileName=${fileName}`;
+
+               const authHeader = 'Basic ' + Buffer.from(`:${this._adoToken}`).toString('base64');
+
+               const img = await fetch(adoImgUrl, { headers: { 'Authorization': authHeader } }).then(r => r.arrayBuffer());
+
+               const eoImgUrl = await this._eonixClient.uploadMarkdownFile(newTask.id, input.id, fileName, Buffer.from(img));
+
+               value = value.replace(adoImgUrl, eoImgUrl);
+
+            });
+
+            await Promise.all(uploadProms);
+
+            if (azImgMatches.length) { console.debug(`Image upload for work item ${workItem.id} - ${referenceName} complete`); }
+
+         }
 
          switch (input.type) {
             case InputType.Select:

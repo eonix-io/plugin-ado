@@ -30,7 +30,7 @@ if (!eonixBoardId) { throw new Error('Missing EONIX_BOARD_ID config'); }
    let processedWorkItems = 0;
    await loadWorkItems(boardAdoPlugin, fields, async wis => {
       processedWorkItems += wis.length;
-      console.log(`Received batch of ${wis.length} work item. Total ${processedWorkItems + wis.length}`);
+      console.log(`Received batch of ${wis.length} work item. Total ${processedWorkItems}`);
       taskProcessor.QueueWorkItems(wis);
    });
 
