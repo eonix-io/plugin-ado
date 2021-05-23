@@ -17,23 +17,14 @@
       <div class="row">
          <div class="col">
             <div class="form-floating">
-               <input
-                  class="form-control"
-                  id="token"
-                  placeholder="*"
-                  v-model="token"
-               />
+               <input class="form-control" id="token" placeholder="*" v-model="token" />
                <label for="token">Token</label>
             </div>
          </div>
       </div>
       <div class="row" v-if="token && organizationUrl">
          <div class="col">
-            <button
-               class="btn btn-primary"
-               :disabled="isConnecting"
-               @click="connect"
-            >
+            <button class="btn btn-primary" :disabled="isConnecting" @click="connect">
                Connect
             </button>
          </div>
@@ -52,11 +43,11 @@
       },
       setup(_, { emit }) {
          const organizationUrl = ref<string>(
-            process.env.VUE_APP_TEST_ORG_URL
-               ? process.env.VUE_APP_TEST_ORG_URL.trimEnd('/') + '/'
+            import.meta.env.VITE_TEST_ORG_URL
+               ? import.meta.env.VITE_TEST_ORG_URL + '/'
                : ''
          );
-         const token = ref<string>(process.env.VUE_APP_TEST_TOKEN ?? '');
+         const token = ref<string>(import.meta.env.VITE_TEST_TOKEN ?? '');
          const isConnecting = ref(false);
          const connectError = ref<string | null>(null);
 

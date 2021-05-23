@@ -19,14 +19,14 @@
       },
       setup() {
 
-         if (!process.env.VUE_APP_EONIX_TOKEN) {
+         if (!import.meta.env.VITE_EONIX_TOKEN) {
             throw new Error('Missing eonix token config');
          }
 
-         const boardId = process.env.VUE_APP_EONIX_BOARD_ID;
+         const boardId = import.meta.env.VITE_EONIX_BOARD_ID;
          if (!boardId) { throw new Error('Missing eonix board id config'); }
 
-         const eonixClient = new EonixClient(() => process.env.VUE_APP_EONIX_TOKEN, { host: process.env.VUE_APP_EONIX_HOST });
+         const eonixClient = new EonixClient(() => import.meta.env.VITE_EONIX_TOKEN!, { host: import.meta.env.VITE_EONIX_HOST });
          provide('EONIX_CLIENT', eonixClient);
 
          return { boardId };

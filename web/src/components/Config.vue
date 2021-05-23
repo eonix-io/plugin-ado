@@ -1,6 +1,6 @@
 
 <template>
-   <div class="container-fluid">
+   <div class="">
       <connection-info @connected="onConnect"></connection-info>
       <div class="row" v-if="teamProjects">
          <div class="col">
@@ -41,9 +41,7 @@
             <h3 class="d-inline-block mb-2">ADO Fields</h3>
             <div class="d-inline-block ms-3">
                <input type="checkbox" v-model="mappingFilters.hasValue" for="hideValuelessFilter" />
-               <label for="hideValuelessFilter">
-                  Hide fields with no values
-               </label>
+               <label for="hideValuelessFilter"> Hide fields with no values </label>
             </div>
 
             <div class="list-group list-group-flush">
@@ -94,8 +92,8 @@
 <script lang="ts">
 
    import { computed, defineComponent, inject, provide, reactive, ref, watch } from 'vue';
-   import type { TeamProjectReference } from 'azure-devops-extension-api/Core';
-   import type { WorkItemType } from 'azure-devops-extension-api/WorkItemTracking';
+   import type { TeamProjectReference } from 'azure-devops-extension-api/bin/Core';
+   import type { WorkItemType } from 'azure-devops-extension-api/bin/WorkItemTracking';
    import { useFieldMappings } from './useFieldMappings';
    import FieldModal from './FieldModal.vue';
    import { AdoClient } from '@/services';
@@ -126,7 +124,7 @@
                project.value = null;
                return;
             }
-            if (process.env?.VUE_APP_TEST_PROJECT) { project.value = projects.find(p => p.name === process.env?.VUE_APP_TEST_PROJECT) ?? null; }
+            if (import.meta.env?.VITE_TEST_PROJECT) { project.value = projects.find(p => p.name === import.meta.env?.VITE_TEST_PROJECT) ?? null; }
          });
 
          const workItemTypes = computed(() => {
@@ -139,8 +137,8 @@
             selectedWorkItemTypes.value = [];
             selectedReferenceName.value = null;
             if (!itemTypes) { return; }
-            if (!process.env?.VUE_APP_TEST_TYPES) { return; }
-            const testTypes = itemTypes.filter(t => (process.env.VUE_APP_TEST_TYPES as string).includes(t.name));
+            if (!import.meta.env?.VITE_TEST_TYPES) { return; }
+            const testTypes = itemTypes.filter(t => (import.meta.env.VITE_TEST_TYPES as string).includes(t.name));
             testTypes.forEach(t => toggleWorkItemSelection(t));
          });
 
